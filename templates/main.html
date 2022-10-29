@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="/docs/4.0/assets/img/favicons/favicon.ico">
+
+    <title>Jumbotron Template for Bootstrap</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+      <div class="container">
+        <a href="/add" class="btn btn-primary">Add sandbox</a>
+      </div>
+    </nav>
+
+    <main role="main">
+      <div class="container">
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <a href="https://traefik.codemowers.ee/dashboard/" class="btn btn-info">Shared Traefik</a>
+        <a href="https://prom.codemowers.eu/" class="btn btn-info">Prometheus for supporting infra</a>
+        <a href="https://longhorn.codemowers.eu/" class="btn btn-info">Longhorn storage</a>
+
+        <p>Your sandboxes:</p>
+        <ul>
+          {% for sandbox in sandboxes %}
+            <li>{{ sandbox.namespace }}
+              <a href="https://argocd.codemowers.eu/applications/{{ sandbox.namespace }}?resource=&view=network" class="btn btn-primary" target="_blank">Argo status</a>
+              <a href="https://prom{{ sandbox.hostname_suffix }}" class="btn btn-warning">Prometheus</a>
+              <a href="https://traefik{{ sandbox.hostname_suffix }}/dashboard/" class="btn btn-info">Traefik</a>
+            </li>
+          {% endfor %}
+        </ul>
+
+
+        <p>To access cluster</p>
+        <pre>
+        <code>
+kubectl krew install oidc-login
+mkdir -p ~/.kube
+cat << EOF > ~/.kube/config
+apiVersion: v1
+clusters:
+- cluster:
+    server: https://kube.codemowers.eu
+  name: codemowers
+contexts:
+- context:
+    cluster: codemowers
+    user: oidc
+  name: default
+current-context: default
+kind: Config
+preferences: {}
+users:
+- name: oidc
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1beta1
+      command: kubectl
+      args:
+      - oidc-login
+      - get-token
+      - --listen-address=127.0.0.1:27890
+      - --oidc-issuer-url=https://dex.codemowers.eu
+      - --oidc-client-id=kubelogin
+      - --oidc-use-pkce
+      - --oidc-extra-scope=profile,email,groups
+EOF
+    </code>
+    </pre>
+
+
+    </div>
+    </main>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-OERcA2EqjJCMA+/3y+gxIOqMEjwtxJY7qPCqsdltbNJuaOe923+mo//f6V8Qbsw3" crossorigin="anonymous"></script>
+  </body>
+</html>
+
