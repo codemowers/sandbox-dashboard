@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import string
 import random
 from sanic import Sanic, response
 from kubernetes_asyncio.client.api_client import ApiClient
@@ -29,7 +30,7 @@ async def add_session(request):
 
 
 async def create_sandbox(email, values):
-    identifier = "".join([random.choice(characters) for _ in range(0, 10)])
+    identifier = "".join([random.choice(characters) for _ in range(0, 5)])
     values.append({
         "name": "username",
         "value": identifier
@@ -38,7 +39,8 @@ async def create_sandbox(email, values):
         "name": "email",
         "value": email
     })
-    name = "sb-%s" % identifier
+    j, _ = email.lower().split("@")
+    name = "%s-%s" % ("".join([x for x in j if x in string.ascii_letters]), identifier)
     print("Creating sandbox:", name)
     body = {
         "kind": "Application",
