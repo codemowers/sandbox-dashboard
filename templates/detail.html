@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="/docs/4.0/assets/img/favicons/favicon.ico">
+
+    <title>Jumbotron Template for Bootstrap</title>
+
+    <!-- Bootstrap core CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+
+
+
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+      <div class="container">
+        <a href="/" class="btn btn-primary">Back to sandbox listing</a>
+      </div>
+    </nav>
+
+    <main role="main">
+      <div class="container">
+    <br/>
+    <br/>
+    <br/>
+    <br/>
+
+              <a href="https://argocd.codemowers.eu/applications/{{ sandbox.namespace }}?resource=&view=network" class="btn btn-primary" target="_blank">Argo status</a>
+              {% if sandbox.parameters.prometheus %}
+              <a href="https://prom{{ sandbox.hostname_suffix }}" class="btn btn-warning">Prometheus</a>
+              {% endif %}
+              {% if sandbox.parameters.traefik %}
+              <a href="https://traefik{{ sandbox.hostname_suffix }}/dashboard/" class="btn btn-info">Traefik</a>
+              {% endif %}
+              {% if sandbox.parameters.logging %}
+              <a href="https://log{{ sandbox.hostname_suffix }}/" class="btn btn-info">Logmower</a>
+              {% endif %}
+
+
+    <p>Frequently used commands:</p>
+
+    <pre>kubectl get pods --context codemowers.eu/{{ sandbox.namespace }}</pre>
+    <pre>kubectl get deployments --context codemowers.eu/{{ sandbox.namespace }}</pre>
+    <pre>kubectl get statefulsets --context codemowers.eu/{{ sandbox.namespace }}</pre>
+    <pre>kubectl get svc --context codemowers.eu/{{ sandbox.namespace }}</pre>
+    <pre>kubectl get ep --context codemowers.eu/{{ sandbox.namespace }}</pre>
+    <pre>kubectl get ing --context codemowers.eu/{{ sandbox.namespace }}</pre>
+
+
+
+
+    <p>To Skaffold develop using one of the template repositories</p>
+
+    <pre>skaffold dev --kube-context codemowers.eu/{{ sandbox.namespace }}</pre>
+
+
+    <p>To configure cluster access:</p>
+
+    <main role="main">
+
+
+
+<pre>
+cat << EOF > kubeconfig-new
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://kube.codemowers.eu
+  name: kube.codemowers.eu
+contexts:
+- context:
+    cluster: kube.codemowers.eu
+    user: oidc
+    namespace: {{ sandbox.namespace }}
+  name: codemowers.eu/{{ sandbox.namespace }}
+users:
+- name: oidc
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1beta1
+      command: kubectl
+      args:
+      - oidc-login
+      - get-token
+      - --listen-address=127.0.0.1:27890
+      - --oidc-issuer-url=https://dex.codemowers.eu
+      - --oidc-client-id=kubelogin
+      - --oidc-use-pkce
+      - --oidc-extra-scope=profile,email,groups
+EOF
+KUBECONFIG="$HOME/.kube/config:kubeconfig-new" kubectl config view > kubeconfig-merged
+mv kubeconfig-merged $HOME/.kube/config
+rm -fv kubeconfig-new
+</pre>
+
+
+
+
+      </main>
+
+  </body>
+</html>
+

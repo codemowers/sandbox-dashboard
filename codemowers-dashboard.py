@@ -92,6 +92,27 @@ async def add_namespace_form(request):
     }
 
 
+def wrap_sandbox_parameters(app):
+    app_source = app["spec"].get("source", {})
+    app_helm = app_source.get("helm", {})
+    params = dict([(p["name"], p.get("value", "")) for p in app_helm.get("parameters", {})])
+    subdomain = params.get("subdomain", "false").lower() == "true"
+    return {
+        "namespace": app["spec"]["destination"]["namespace"],
+        "hostname_suffix": (".%s.codemowers.cloud" if subdomain else "-%s.codemowers.ee") % params.get("username"),
+        "parameters": params
+    }
+
+
+@app.get("/sandbox/<sandbox_name>")
+@app.ext.template("detail.html")
+async def sandbox_detail(request, sandbox_name):
+    async with ApiClient() as api:
+        api_instance = client.CustomObjectsApi(api)
+        argo_app = await api_instance.get_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications", sandbox_name)
+        return {"sandbox": wrap_sandbox_parameters(argo_app)}
+
+
 @app.get("/")
 @app.ext.template("main.html")
 async def handler(request):
@@ -99,16 +120,10 @@ async def handler(request):
         api_instance = client.CustomObjectsApi(api)
         sandboxes = []
         for app in (await api_instance.list_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications"))["items"]:
-            try:
-                values = dict([(p["name"], p.get("value", "")) for p in app["spec"]["source"]["helm"]["parameters"]])
-            except KeyError:
-                continue
-            subdomain = values.get("subdomain", "false").lower() == "true"
-            if values.get("email") == request.headers.get("X-Forwarded-User", fallback_email):
-                sandboxes.append({
-                    "namespace": app["spec"]["destination"]["namespace"],
-                    "hostname_suffix": (".%s.codemowers.cloud" if subdomain else "-%s.codemowers.ee") % values.get("username")
-                })
+            w = wrap_sandbox_parameters(app)
+
+            if w["parameters"].get("email") == request.headers.get("X-Forwarded-User", fallback_email):
+                sandboxes.append(w)
 
         return {
             "sandboxes": sandboxes

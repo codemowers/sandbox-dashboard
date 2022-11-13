@@ -23,6 +23,8 @@
         <br/>
         <br/>
         <br/>
+
+        <p>Shared infrastructure</p>
         <a href="https://traefik.codemowers.ee/dashboard/" class="btn btn-info">Shared Traefik</a>
         <a href="https://prom.codemowers.eu/" class="btn btn-info">Prometheus for supporting infra</a>
         <a href="https://longhorn.codemowers.eu/" class="btn btn-info">Longhorn storage</a>
@@ -30,54 +32,11 @@
         <p>Your sandboxes:</p>
         <ul>
           {% for sandbox in sandboxes %}
-            <li>{{ sandbox.namespace }}
-              <a href="https://argocd.codemowers.eu/applications/{{ sandbox.namespace }}?resource=&view=network" class="btn btn-primary" target="_blank">Argo status</a>
-              <a href="https://prom{{ sandbox.hostname_suffix }}" class="btn btn-warning">Prometheus</a>
-              <a href="https://traefik{{ sandbox.hostname_suffix }}/dashboard/" class="btn btn-info">Traefik</a>
-            </li>
+            <li><a href="/sandbox/{{ sandbox.namespace }}">{{ sandbox.namespace }}</a></li>
           {% endfor %}
         </ul>
 
-
-        <p>To access cluster</p>
-        <pre>
-        <code>
-kubectl krew install oidc-login
-mkdir -p ~/.kube
-cat << EOF > ~/.kube/config
-apiVersion: v1
-clusters:
-- cluster:
-    server: https://kube.codemowers.eu
-  name: codemowers
-contexts:
-- context:
-    cluster: codemowers
-    user: oidc
-  name: default
-current-context: default
-kind: Config
-preferences: {}
-users:
-- name: oidc
-  user:
-    exec:
-      apiVersion: client.authentication.k8s.io/v1beta1
-      command: kubectl
-      args:
-      - oidc-login
-      - get-token
-      - --listen-address=127.0.0.1:27890
-      - --oidc-issuer-url=https://dex.codemowers.eu
-      - --oidc-client-id=kubelogin
-      - --oidc-use-pkce
-      - --oidc-extra-scope=profile,email,groups
-EOF
-    </code>
-    </pre>
-
-
-    </div>
+      </div>
     </main>
 
 
