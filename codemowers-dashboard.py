@@ -17,6 +17,7 @@ session = {}
 
 class PlaygroundForm(SanicForm):
     dex = BooleanField(description="Instantiate Dex for this namespace")
+    logging = BooleanField("Instantiate Logmower stack for this namespace")
     prometheus = BooleanField("Instantiate Prometheus for this namespace")
     traefik = BooleanField("Instantiate dedicated Traeifk instance in this namespace")
     subdomain = BooleanField("Create dedicated subdomain under codemowers.cloud")
