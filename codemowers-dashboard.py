@@ -45,9 +45,9 @@ async def create_sandbox(email, values):
     body = {
         "kind": "Application",
         "apiVersion": "argoproj.io/v1alpha1",
-
         "metadata": {
-            "name": name
+            "name": name,
+            "finalizers": ["resources-finalizer.argocd.argoproj.io"],
         },
         "spec": {
             "project": "default",
