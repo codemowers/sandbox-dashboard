@@ -99,7 +99,10 @@ async def handler(request):
         api_instance = client.CustomObjectsApi(api)
         sandboxes = []
         for app in (await api_instance.list_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications"))["items"]:
-            values = dict([(p["name"], p.get("value", "")) for p in app["spec"]["source"]["helm"]["parameters"]])
+            try:
+                values = dict([(p["name"], p.get("value", "")) for p in app["spec"]["source"]["helm"]["parameters"]])
+            except KeyError:
+                continue
             subdomain = values.get("subdomain", "false").lower() == "true"
             if values.get("email") == request.headers.get("X-Forwarded-User", fallback_email):
                 sandboxes.append({
