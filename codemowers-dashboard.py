@@ -16,6 +16,8 @@ session = {}
 
 
 class PlaygroundForm(SanicForm):
+    harbor_project = BooleanField("Create Harbor project with"
+        "push/pull credentials in this sandbox, for Skaffold development")
     dex = BooleanField(description="Instantiate Dex for this namespace")
     logging = BooleanField("Instantiate Logmower stack for this namespace")
     prometheus = BooleanField("Instantiate Prometheus for this namespace")
