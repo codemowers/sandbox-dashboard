@@ -93,7 +93,7 @@ users:
       - --oidc-use-pkce
       - --oidc-extra-scope=profile,email,groups
 EOF
-KUBECONFIG="$HOME/.kube/config:kubeconfig-new" kubectl config view > kubeconfig-merged
+KUBECONFIG="$HOME/.kube/config:kubeconfig-new" kubectl config view --raw > kubeconfig-merged
 mv kubeconfig-merged $HOME/.kube/config
 rm -fv kubeconfig-new
 </pre>
