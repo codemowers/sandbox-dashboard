@@ -77,6 +77,7 @@ async def create_sandbox(email, values):
     async with ApiClient() as api:
         api_instance = client.CustomObjectsApi(api)
         await api_instance.create_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications", body)
+        return name
 
 
 @app.get("/add")
@@ -85,9 +86,9 @@ async def create_sandbox(email, values):
 async def add_namespace_form(request):
     form = PlaygroundForm(request)
     if form.validate():
-        await create_sandbox(request.headers.get("X-Forwarded-User", fallback_email),
+        sandbox_name = await create_sandbox(request.headers.get("X-Forwarded-User", fallback_email),
             values=[{"name": key, "value": str(value)} for (key, value) in form.data.items() if key not in ("submit", "csrf_token")])
-        return response.redirect("/")
+        return response.redirect("/sandbox/%s" % sandbox_name)
 
     return {
         "form": form
