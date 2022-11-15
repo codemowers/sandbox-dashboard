@@ -52,10 +52,20 @@
 
 
 
-
+    <h2>Developing with Skaffold</h2>
     <p>To Skaffold develop using one of the template repositories</p>
 
-    <pre>skaffold dev --kube-context codemowers.eu/{{ sandbox.namespace }} --default-repo harbor.codemowers.eu/{{ sandbox.namespace }}</pre>
+    <pre>skaffold dev --kube-context codemowers.eu/{{ sandbox.namespace }} --default-repo harbor.codemowers.eu/{{ sandbox.namespace }} --namespace {{ sandbox.namespace }}</pre>
+
+    <h2>Building locally with Docker</h2>
+    <p>In some cases you might want to have Skaffold run <pre>docker build</pre>
+    locally. In that case you need to copy the Docker registry credentials from the cluster.
+
+
+    <pre>cat ~/.docker/config.json | jq ".auths.\"harbor.codemowers.eu\".auth = \"$(kubectl get secret --context codemowers.eu/{{ sandbox.namespace }} kaniko-secret -o jsonpath='{.data.config\.json}' | base64 -d | jq -s '.[].auths."harbor.codemowers.eu".auth' -r)\"" > .dockerconfig.json && mv .dockerconfig.json ~/.docker/config.json</pre>
+
+    <p>To reconfigure Skaffold either comment or remove `build.cluster` section</p>
+
 
 
     <p>To configure cluster access:</p>
