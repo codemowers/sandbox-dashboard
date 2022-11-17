@@ -1,3 +1,4 @@
 FROM harbor.k-space.ee/k-space/microservice-base
 ADD app /app
+WORKDIR /app
 ENTRYPOINT /app/sandbox-dashboard.py
