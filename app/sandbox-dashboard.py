@@ -11,8 +11,10 @@ from wtforms import SubmitField, BooleanField
 fallback_email = "lauri.vosandi@gmail.com"
 characters = "abcdefghijkmnpqrstuvwxyz23456789"
 app = Sanic("dashboard")
-app.config["WTF_CSRF_SECRET_KEY"] = os.urandom(50)
 session = {}
+
+if not app.config.get("WTF_CSRF_SECRET_KEY", ""):
+    raise ValueError("SANIC_WTF_CSRF_SECRET_KEY environment variable not set")
 
 
 class PlaygroundForm(SanicForm):
@@ -141,4 +143,4 @@ async def setup_db(app, loop):
         config.load_incluster_config()
 
 
-app.run(host="0.0.0.0", port=3001, single_process=True)
+app.run(host="0.0.0.0", port=3001, single_process=True, motd=False)
