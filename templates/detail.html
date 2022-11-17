@@ -7,7 +7,7 @@
     <meta name="author" content="">
     <link rel="icon" href="/docs/4.0/assets/img/favicons/favicon.ico">
 
-    <title>Jumbotron Template for Bootstrap</title>
+    <title>codemowers.io</title>
 
     <!-- Bootstrap core CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
@@ -29,51 +29,21 @@
     <br/>
     <br/>
 
-              <a href="https://argocd.codemowers.eu/applications/{{ sandbox.namespace }}?resource=&view=network" class="btn btn-primary" target="_blank">Argo status</a>
-              {% if sandbox.parameters.prometheus %}
-              <a href="https://prom{{ sandbox.hostname_suffix }}" class="btn btn-warning">Prometheus</a>
-              {% endif %}
-              {% if sandbox.parameters.traefik %}
-              <a href="https://traefik{{ sandbox.hostname_suffix }}/dashboard/" class="btn btn-info">Traefik</a>
-              {% endif %}
-              {% if sandbox.parameters.logging %}
-              <a href="https://log{{ sandbox.hostname_suffix }}/" class="btn btn-info">Logmower</a>
-              {% endif %}
+    <a href="https://argocd.codemowers.eu/applications/{{ sandbox.namespace }}?resource=&view=network" class="btn btn-primary" target="_blank">Argo status</a>
+    {% if sandbox.parameters.prometheus %}
+    <a href="https://prom{{ sandbox.hostname_suffix }}" class="btn btn-warning">Monitoring</a>
+    {% endif %}
+    {% if sandbox.parameters.prometheus %}
+    <a href="https://log.codemowers.eu?kubernetes.namespace={{ sandbox.namespace }}" class="btn btn-warning">Logging</a>
+    {% endif %}
+    {% if sandbox.parameters.traefik %}
+    <a href="https://traefik{{ sandbox.hostname_suffix }}/dashboard/" class="btn btn-info">Traefik</a>
+    {% endif %}
 
 
-    <p>Frequently used commands:</p>
-
-    <pre>kubectl get pods --context codemowers.eu/{{ sandbox.namespace }}</pre>
-    <pre>kubectl get deployments --context codemowers.eu/{{ sandbox.namespace }}</pre>
-    <pre>kubectl get statefulsets --context codemowers.eu/{{ sandbox.namespace }}</pre>
-    <pre>kubectl get svc --context codemowers.eu/{{ sandbox.namespace }}</pre>
-    <pre>kubectl get ep --context codemowers.eu/{{ sandbox.namespace }}</pre>
-    <pre>kubectl get ing --context codemowers.eu/{{ sandbox.namespace }}</pre>
-
-
-
-    <h2>Developing with Skaffold</h2>
-    <p>To Skaffold develop using one of the template repositories</p>
-
-    <pre>skaffold dev --kube-context codemowers.eu/{{ sandbox.namespace }} --default-repo harbor.codemowers.eu/{{ sandbox.namespace }} --namespace {{ sandbox.namespace }}</pre>
-
-    <h2>Building locally with Docker</h2>
-    <p>In some cases you might want to have Skaffold run <pre>docker build</pre>
-    locally. In that case you need to copy the Docker registry credentials from the cluster.
-
-
-    <pre>cat ~/.docker/config.json | jq ".auths.\"harbor.codemowers.eu\".auth = \"$(kubectl get secret --context codemowers.eu/{{ sandbox.namespace }} kaniko-secret -o jsonpath='{.data.config\.json}' | base64 -d | jq -s '.[].auths."harbor.codemowers.eu".auth' -r)\"" > .dockerconfig.json && mv .dockerconfig.json ~/.docker/config.json</pre>
-
-    <p>To reconfigure Skaffold either comment or remove `build.cluster` section</p>
-
-
-
-    <p>To configure cluster access:</p>
-
-    <main role="main">
-
-
-
+    <h2>Sandbox access</h2>
+    <p>To configure cluster access run following snippet,
+    it creates a Kubernetes client context named codemowers.eu/{{ sandbox.namespace }}:
 <pre>
 cat << EOF > kubeconfig-new
 apiVersion: v1
@@ -109,9 +79,38 @@ rm -fv kubeconfig-new
 </pre>
 
 
+    <h2>Frequently used commands:</h2>
+    <pre>kubectl apply --context codemowers.eu/{{ sandbox.namespace }} -f foobar.yaml</pre>
+
+    <pre>kubectl get pods --context codemowers.eu/{{ sandbox.namespace }}</pre>
+    <pre>kubectl get deployments --context codemowers.eu/{{ sandbox.namespace }}</pre>
+    <pre>kubectl get statefulsets --context codemowers.eu/{{ sandbox.namespace }}</pre>
+    <pre>kubectl get svc --context codemowers.eu/{{ sandbox.namespace }}</pre>
+    <pre>kubectl get ep --context codemowers.eu/{{ sandbox.namespace }}</pre>
+    <pre>kubectl get ing --context codemowers.eu/{{ sandbox.namespace }}</pre>
 
 
-      </main>
+
+
+
+    <h2>Developing with Skaffold</h2>
+    <p>To <a href="https://skaffold.dev/docs/install/">Skaffold</a> develop using one of the template repositories for
+    <a href="https://github.com/codemowers/hello-python">Flask</a>,
+    <a href="https://github.com/codemowers/hello-nodejs">Express.js</a>:
+    </p>
+
+    <pre>skaffold dev --kube-context codemowers.eu/{{ sandbox.namespace }} --default-repo harbor.codemowers.eu/{{ sandbox.namespace }} --namespace {{ sandbox.namespace }}</pre>
+
+    <h2>Building locally with Docker</h2>
+    <p>In some cases you might want to have Skaffold run <pre>docker build</pre>
+    locally. In that case you need to copy the Docker registry credentials from the cluster.
+
+
+    <pre>cat ~/.docker/config.json | jq ".auths.\"harbor.codemowers.eu\".auth = \"$(kubectl get secret --context codemowers.eu/{{ sandbox.namespace }} kaniko-secret -o jsonpath='{.data.config\.json}' | base64 -d | jq -s '.[].auths."harbor.codemowers.eu".auth' -r)\"" > .dockerconfig.json && mv .dockerconfig.json ~/.docker/config.json</pre>
+
+    <p>To reconfigure Skaffold either comment or remove `build.cluster` section in the `skaffold.yaml` file</p>
+
+
 
   </body>
 </html>
