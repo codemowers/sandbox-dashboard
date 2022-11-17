@@ -1,2 +1,2 @@
 kind: template
-load: docker.yaml
+load: docker-multiarch.yaml
