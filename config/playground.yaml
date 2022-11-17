@@ -1,0 +1,18 @@
+- name: prometheus
+  description: "Set up dedicated Prometheus instance for this sandbox"
+  default: true
+- name: logging
+  description: "Enable logging with shared Logmower instance"
+  default: true
+- name: traefik
+  description: "Set up dedicated Traefik instance for this sandbox"
+  default: false
+- name: harbor_project
+  description: "Set up Docker registry push/pull secrets for Skaffold use"
+  default: true
+- name: subdomain
+  default: false
+  description: "Create dedicated subdomain under codemowers.cloud"
+- name: argocd
+  description: "Set up separate ArgoCD instance for this namespace"
+  default: false

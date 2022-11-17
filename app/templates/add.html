@@ -6,45 +6,45 @@
     <meta name="description" content="">
     <meta name="author" content="">
     <link rel="icon" href="/docs/4.0/assets/img/favicons/favicon.ico">
-
     <title>Jumbotron Template for Bootstrap</title>
-
-    <!-- Bootstrap core CSS -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
-
-
-
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
   </head>
-
   <body>
-
-    
     <br/>
     <br/>
     <br/>
     <br/>
-
-    <main role="main">
-
-
-    
-    
-          <div class="container">
-          <p>Select feature flags for the namespace:</p>
-<form action="/add" method="POST">
-{{ form.csrf_token }}
-
-   {% for field in form %}
-       {{ field.label() }}
-       {{ field() }}<br/>
-   {% endfor %}
-
-   <button type="submit" />
-</form>
-
-          </div>
+    <form action="/add" method="POST">
+      <main role="main">
+        <div class="container">
+          <p>Select feature flags for the sandbox:</p>
+            {{ form.csrf_token }}
+            <ul class="list-group">
+              {% for field in form %}
+              {% if field.type == "BooleanField" %}
+                <li class="list-group-item" style="user-select: none;">
+                  <div class="form-check form-switch">
+                    {{ field(class_="form-check-input")}}
+                    <label class="form-check-label" for="{{ field.id }}">
+                      {{ field.description }}
+                      {%- for error in field.errors %}
+                        <span class="form__error">{{ error }}</span>
+                      {% endfor %}
+                    </label>
+                  </div>
+                </li>
+              {% endif %}
+              {% endfor %}
+            </ul>
+        </div>
+        <br/>
+        <div class="container">
+          <p>
+            <button type="submit" class="btn btn-primary">Create sandbox</button>
+          </p>
+        </div>
       </main>
-    
+    </form>
   </body>
 </html>
 

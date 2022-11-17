@@ -1,32 +1,34 @@
 #!/usr/bin/env python3
 import os
-import string
 import random
+import sys
+import string
+import yaml
 from sanic import Sanic, response
 from kubernetes_asyncio.client.api_client import ApiClient
 from kubernetes_asyncio import client, config
 from sanic_wtf import SanicForm
-from wtforms import SubmitField, BooleanField
+from wtforms import BooleanField
 
 fallback_email = "lauri.vosandi@gmail.com"
 characters = "abcdefghijkmnpqrstuvwxyz23456789"
 app = Sanic("dashboard")
 session = {}
+_, path = sys.argv
 
 if not app.config.get("WTF_CSRF_SECRET_KEY", ""):
     raise ValueError("SANIC_WTF_CSRF_SECRET_KEY environment variable not set")
 
 
 class PlaygroundForm(SanicForm):
-    harbor_project = BooleanField("Create Harbor project with"
-        "push/pull credentials in this sandbox, for Skaffold development")
-    dex = BooleanField(description="Instantiate Dex for this namespace")
-    logging = BooleanField("Instantiate Logmower stack for this namespace")
-    prometheus = BooleanField("Instantiate Prometheus for this namespace")
-    traefik = BooleanField("Instantiate dedicated Traeifk instance in this namespace")
-    subdomain = BooleanField("Create dedicated subdomain under codemowers.cloud")
-    argocd = BooleanField("Instantiate ArgoCD instance in this namespace")
-    submit = SubmitField("Confirm")
+    pass
+
+
+with open(path) as fh:
+    for kwargs in yaml.safe_load(fh.read()):
+        if kwargs["default"]:
+            kwargs["render_kw"] = {"checked": ""}
+        setattr(PlaygroundForm, kwargs["name"], BooleanField(**kwargs))
 
 
 @app.middleware("request")
@@ -87,6 +89,7 @@ async def create_sandbox(email, values):
 @app.ext.template("add.html")
 async def add_namespace_form(request):
     form = PlaygroundForm(request)
+
     if form.validate():
         sandbox_name = await create_sandbox(request.headers.get("X-Forwarded-User", fallback_email),
             values=[{"name": key, "value": str(value)} for (key, value) in form.data.items() if key not in ("submit", "csrf_token")])
