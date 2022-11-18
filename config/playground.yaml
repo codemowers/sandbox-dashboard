@@ -1,18 +1,27 @@
 - name: prometheus
   description: "Set up dedicated Prometheus instance for this sandbox"
   default: true
+  icon: https://cncf-branding.netlify.app/img/projects/prometheus/stacked/color/prometheus-stacked-color.png
 - name: logging
   description: "Enable logging with shared Logmower instance"
   default: true
+  link: https://log.codemowers.eu/?namespaces
 - name: traefik
   description: "Set up dedicated Traefik instance for this sandbox"
   default: false
+  icon: https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Traefik.logo.png/174px-Traefik.logo.png
 - name: harbor_project
   description: "Set up Docker registry push/pull secrets for Skaffold use"
   default: true
+  icon: https://cncf-branding.netlify.app/img/projects/harbor/stacked/color/harbor-stacked-color.png
 - name: subdomain
   default: false
   description: "Create dedicated subdomain under codemowers.cloud"
 - name: argocd
   description: "Set up separate ArgoCD instance for this namespace"
   default: false
+  icon: https://cncf-branding.netlify.app/img/projects/argo/stacked/color/argo-stacked-color.png
+- name: dex
+  description: "Dedicated Dex instance"
+  default: false
+  icon: https://cncf-branding.netlify.app/img/projects/dex/stacked/color/dex-stacked-color.png
