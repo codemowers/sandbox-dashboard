@@ -33,8 +33,8 @@ with open(path) as fh:
             "name": feature_flag["name"],
             "description": feature_flag["description"],
             "default": feature_flag["default"],
+            "render_kw": {"checked": ""} if feature_flag["default"] else {}
         }
-        kwargs["render_kw"] = {"checked": ""}
         setattr(PlaygroundForm, kwargs["name"], BooleanField(**kwargs))
 
 
