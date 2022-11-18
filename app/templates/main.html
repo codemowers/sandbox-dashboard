@@ -23,19 +23,37 @@
         <br/>
         <br/>
         <br/>
-
         <p>Shared infrastructure</p>
         <a href="https://traefik.codemowers.ee/dashboard/" class="btn btn-info">Shared Traefik</a>
         <a href="https://prom.codemowers.eu/" class="btn btn-info">Prometheus for supporting infra</a>
         <a href="https://longhorn.codemowers.eu/" class="btn btn-info">Longhorn storage</a>
-
         <p>Your sandboxes:</p>
-        <ul>
-          {% for sandbox in sandboxes %}
-            <li><a href="/sandbox/{{ sandbox.namespace }}">{{ sandbox.namespace }}</a></li>
-          {% endfor %}
-        </ul>
-
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Sandbox name</th>
+              {% for feature_flag in feature_flags %}
+                <th scope="col">
+                  {% if feature_flag.icon %}
+                    <img src="{{ feature_flag.icon }}" style="max-width:64px; max-height:64px;"/>
+                  {% else %}
+                    {{ feature_flag.name }}
+                  {% endif %}
+                </th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for sandbox in sandboxes %}
+              <tr>
+                <td><a href="/sandbox/{{ sandbox.namespace }}">{{ sandbox.namespace }}</a></td>
+                {% for feature_flag in feature_flags %}
+                  <td>{% if sandbox.parameters[feature_flag.name] %}&#128505;{% else %}&#9744;{% endif %}</td>
+                {% endfor %}
+              <tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </main>
 

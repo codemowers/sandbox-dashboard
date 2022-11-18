@@ -10,6 +10,8 @@ from kubernetes_asyncio import client, config
 from sanic_wtf import SanicForm
 from wtforms import BooleanField
 
+ANNOTATION_CREATED_BY = "sandbox-dashboard"
+
 fallback_email = "lauri.vosandi@gmail.com"
 characters = "abcdefghijkmnpqrstuvwxyz23456789"
 app = Sanic("dashboard")
@@ -25,9 +27,14 @@ class PlaygroundForm(SanicForm):
 
 
 with open(path) as fh:
-    for kwargs in yaml.safe_load(fh.read()):
-        if kwargs["default"]:
-            kwargs["render_kw"] = {"checked": ""}
+    feature_flags = yaml.safe_load(fh.read())
+    for feature_flag in feature_flags:
+        kwargs = {
+            "name": feature_flag["name"],
+            "description": feature_flag["description"],
+            "default": feature_flag["default"],
+        }
+        kwargs["render_kw"] = {"checked": ""}
         setattr(PlaygroundForm, kwargs["name"], BooleanField(**kwargs))
 
 
@@ -54,6 +61,9 @@ async def create_sandbox(email, values):
         "apiVersion": "argoproj.io/v1alpha1",
         "metadata": {
             "name": name,
+            "annotations": {
+                "app.kubernetes.io/created-by": ANNOTATION_CREATED_BY
+            }
         },
         "spec": {
             "project": "default",
@@ -145,6 +155,7 @@ async def handler(request):
             if not email or w["parameters"].get("email") == email:
                 sandboxes.append(w)
         return {
+            "feature_flags": feature_flags,
             "sandboxes": sandboxes
         }
 
