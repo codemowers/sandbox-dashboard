@@ -54,7 +54,6 @@ async def create_sandbox(email, values):
         "apiVersion": "argoproj.io/v1alpha1",
         "metadata": {
             "name": name,
-            "finalizers": ["resources-finalizer.argocd.argoproj.io"],
         },
         "spec": {
             "project": "default",
@@ -112,6 +111,16 @@ def wrap_sandbox_parameters(app):
     }
 
 
+@app.get("/sandbox/<sandbox_name>/delete")
+async def sandbox_delete(request, sandbox_name):
+    async with ApiClient() as api:
+        api_instance = client.CustomObjectsApi(api)
+        v1 = client.CoreV1Api(api)
+        await api_instance.delete_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications", sandbox_name)
+        await v1.delete_namespace(sandbox_name)
+        return response.redirect("/")
+
+
 @app.get("/sandbox/<sandbox_name>")
 @app.ext.template("detail.html")
 async def sandbox_detail(request, sandbox_name):
@@ -124,15 +133,17 @@ async def sandbox_detail(request, sandbox_name):
 @app.get("/")
 @app.ext.template("main.html")
 async def handler(request):
+    email = request.headers.get("X-Forwarded-User")
     async with ApiClient() as api:
         api_instance = client.CustomObjectsApi(api)
         sandboxes = []
         for app in (await api_instance.list_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications"))["items"]:
+            if "deletionTimestamp" in app["metadata"]:
+                # Hide sandboxes that are about to be deleted
+                continue
             w = wrap_sandbox_parameters(app)
-
-            if w["parameters"].get("email") == request.headers.get("X-Forwarded-User", fallback_email):
+            if not email or w["parameters"].get("email") == email:
                 sandboxes.append(w)
-
         return {
             "sandboxes": sandboxes
         }
