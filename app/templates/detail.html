@@ -5,9 +5,6 @@
 <br/>
 <br/>
 
-
-
-
 <a href="https://argocd.codemowers.eu/applications/{{ sandbox.namespace }}?resource=&view=network" class="btn btn-primary" target="_blank">Argo status</a>
 {% if sandbox.parameters.prometheus %}
 <a href="https://prom{{ sandbox.hostname_suffix }}" class="btn btn-warning">Monitoring</a>
@@ -18,11 +15,7 @@
 {% if sandbox.parameters.traefik %}
 <a href="https://traefik{{ sandbox.hostname_suffix }}/dashboard/" class="btn btn-info">Traefik</a>
 {% endif %}
-
-
 <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#delete-confirmation">Delete</button>
-
-
 
 <div class="modal fade" id="delete-confirmation" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
@@ -44,6 +37,37 @@
   </div>
 </div>
 
+<h2>Running pods</h2>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Pod name</th>
+      <th scope="col">Status</th>
+      <th scope="col">Links</th>
+    </tr>
+  </thead>
+  <tbody>
+{% for pod in pods %}
+    <tr>
+      <td>{{ pod.metadata.name }}</td>
+      <td>{{ pod.status.phase }}</td>
+      <td>
+{% if sandbox.parameters.prometheus %}
+<a href="https://prom{{ sandbox.hostname_suffix }}/graph?g0.expr=%7Bnamespace%3D%22{{ namespace }}%22%2Cpod%3D%22{{ pod.metadata.name}}%22%7D&g0.tab=1&g0.stacked=0&g0.show_exemplars=0&g0.range_input=1h" class="btn btn-primary"><i class="fas fa-chart-line"></i></a>
+{% endif %}
+              <a href="https://log.codemowers.eu?kubernetes.namespace={{ namespace }}&kubernetes.pod.name={{ pod.metadata.name }}" class="btn btn-primary"><i class="fas fa-clock-rotate-left"></i></a>
+      </td>
+    </tr>
+{% endfor %}
+  </tbody>
+</table>
+
+{% for i in ingress %}
+{% for rule in i.spec.rules %}
+<a href="https://{{ rule.host }}" class="btn btn-info">{{ rule.host }}</a>
+{% endfor %}
+{% endfor %}
 
 <h2>Sandbox access</h2>
 <p>To configure cluster access run following snippet,

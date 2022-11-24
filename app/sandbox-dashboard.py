@@ -4,13 +4,15 @@ import random
 import sys
 import string
 import yaml
+from functools import wraps
 from sanic import Sanic, response
 from kubernetes_asyncio.client.api_client import ApiClient
+from kubernetes_asyncio.client.exceptions import ApiException
 from kubernetes_asyncio import client, config
 from sanic_wtf import SanicForm
 from wtforms import BooleanField
 
-ANNOTATION_CREATED_BY = "sandbox-dashboard"
+ANNOTATION_MANAGED_BY = "sandbox-dashboard"
 
 fallback_email = "lauri.vosandi@gmail.com"
 characters = "abcdefghijkmnpqrstuvwxyz23456789"
@@ -43,7 +45,51 @@ async def add_session(request):
     request.ctx.session = session
 
 
-async def create_sandbox(email, values):
+def login_required(*foo):
+    def wrapper(func):
+        @wraps(func)
+        async def wrapped(request, *args, **kwargs):
+            # TODO: Move to OIDC
+            email = request.headers.get("X-Forwarded-User", fallback_email)
+            request.ctx.user = None
+            async with ApiClient() as api:
+                api_instance = client.CustomObjectsApi(api)
+                resp = await api_instance.list_cluster_custom_object("codemowers.io", "v1alpha1", "clusterusers")
+                try:
+                    # TODO: Figure out better way to do this
+                    for user in resp["items"]:
+                        if user["spec"]["email"] == email:
+                            request.ctx.user = user
+                            break
+                except ApiException as e:
+                    if e.status == 404:
+                        pass
+                    else:
+                        raise
+
+                if not request.ctx.user:
+                    j, _ = email.lower().split("@")
+                    username = "".join([x for x in j if x in string.ascii_letters])
+                    body = {
+                        "apiVersion": "codemowers.io/v1alpha1",
+                        "kind": "ClusterUser",
+                        "metadata": {
+                            "name": username
+                        }, "spec": {
+                            "email": email
+                        }
+                    }
+                    request.ctx.user = await api_instance.create_cluster_custom_object(
+                        "codemowers.io", "v1alpha1", "clusterusers", body)
+                return await func(request, *args, **kwargs)
+        return wrapped
+    return wrapper
+
+
+async def create_sandbox(user, values):
+    labels = {
+        "codemowers.io/clusteruser": user["metadata"]["name"],
+    }
     identifier = "".join([random.choice(characters) for _ in range(0, 5)])
     values.append({
         "name": "username",
@@ -51,18 +97,18 @@ async def create_sandbox(email, values):
     })
     values.append({
         "name": "email",
-        "value": email
+        "value": user["spec"]["email"]
     })
-    j, _ = email.lower().split("@")
-    name = "%s-%s" % ("".join([x for x in j if x in string.ascii_letters]), identifier)
+    name = "%s-%s" % (user["metadata"]["name"], identifier)
     print("Creating sandbox:", name)
     body = {
         "kind": "Application",
         "apiVersion": "argoproj.io/v1alpha1",
         "metadata": {
             "name": name,
+            "labels": labels,
             "annotations": {
-                "app.kubernetes.io/created-by": ANNOTATION_CREATED_BY
+                "app.kubernetes.io/managed-by": ANNOTATION_MANAGED_BY
             }
         },
         "spec": {
@@ -89,21 +135,27 @@ async def create_sandbox(email, values):
     }
     async with ApiClient() as api:
         api_instance = client.CustomObjectsApi(api)
+        v1 = client.CoreV1Api(api)
         await api_instance.create_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications", body)
+        await v1.create_namespace({
+            "metadata": {
+                "name": name,
+                "labels": labels
+            }
+        })
         return name
 
 
 @app.get("/add")
 @app.post("/add")
 @app.ext.template("add.html")
-async def add_namespace_form(request):
+@login_required()
+async def add_sandbox_form(request):
     form = PlaygroundForm(request)
-
     if form.validate():
-        sandbox_name = await create_sandbox(request.headers.get("X-Forwarded-User", fallback_email),
+        sandbox_name = await create_sandbox(request.ctx.user,
             values=[{"name": key, "value": str(value)} for (key, value) in form.data.items() if key not in ("submit", "csrf_token")])
         return response.redirect("/sandbox/%s" % sandbox_name)
-
     return {
         "form": form
     }
@@ -122,6 +174,7 @@ def wrap_sandbox_parameters(app):
 
 
 @app.get("/sandbox/<sandbox_name>/delete")
+@login_required()
 async def sandbox_delete(request, sandbox_name):
     async with ApiClient() as api:
         api_instance = client.CustomObjectsApi(api)
@@ -133,19 +186,29 @@ async def sandbox_delete(request, sandbox_name):
 
 @app.get("/sandbox/<sandbox_name>")
 @app.ext.template("detail.html")
+@login_required()
 async def sandbox_detail(request, sandbox_name):
     async with ApiClient() as api:
         api_instance = client.CustomObjectsApi(api)
+        v1 = client.CoreV1Api(api)
+        network_api = client.NetworkingV1Api(api)
         argo_app = await api_instance.get_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications", sandbox_name)
-        return {"sandbox": wrap_sandbox_parameters(argo_app)}
+        return {
+            "namespace": sandbox_name,
+            "sandbox": wrap_sandbox_parameters(argo_app),
+            "pods": (await v1.list_namespaced_pod(sandbox_name)).items,
+            "ingress": (await network_api.list_namespaced_ingress(sandbox_name)).items
+        }
 
 
 @app.get("/")
 @app.ext.template("main.html")
+@login_required()
 async def handler(request):
     email = request.headers.get("X-Forwarded-User")
     async with ApiClient() as api:
         api_instance = client.CustomObjectsApi(api)
+
         sandboxes = []
         for app in (await api_instance.list_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications"))["items"]:
             if "deletionTimestamp" in app["metadata"]:
