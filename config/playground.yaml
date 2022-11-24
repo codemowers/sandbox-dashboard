@@ -17,11 +17,11 @@
 - name: subdomain
   default: false
   description: "Create dedicated subdomain under codemowers.cloud"
-- name: argocd
-  description: "Set up separate ArgoCD instance for this namespace"
-  default: false
-  icon: https://cncf-branding.netlify.app/img/projects/argo/stacked/color/argo-stacked-color.png
 - name: dex
   description: "Dedicated Dex instance"
   default: false
   icon: https://cncf-branding.netlify.app/img/projects/dex/stacked/color/dex-stacked-color.png
+- name: argocd
+  description: "Set up separate ArgoCD instance for this namespace"
+  default: false
+  icon: https://cncf-branding.netlify.app/img/projects/argo/stacked/color/argo-stacked-color.png

@@ -4,7 +4,7 @@
 <br/>
 <br/>
 <br/>
-
+<h1>Sandbox {{ namespace }} details</h1>
 <a href="https://argocd.codemowers.eu/applications/{{ sandbox.namespace }}?resource=&view=network" class="btn btn-primary" target="_blank">Argo status</a>
 {% if sandbox.parameters.prometheus %}
 <a href="https://prom{{ sandbox.hostname_suffix }}" class="btn btn-warning">Monitoring</a>
@@ -16,78 +16,56 @@
 <a href="https://traefik{{ sandbox.hostname_suffix }}/dashboard/" class="btn btn-info">Traefik</a>
 {% endif %}
 <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#delete-confirmation">Delete</button>
-
-<div class="modal fade" id="delete-confirmation" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="exampleModalLabel">Sandbox delete confirmation</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        Are you sure you want to delete sandbox {{ sandbox.namespace }}?
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <a href="/sandbox/{{ sandbox.namespace }}/delete" type="submit" class="btn btn-danger">Confirm</a>
+<br/>
+<br/>
+<nav>
+  <div class="nav nav-tabs" id="nav-tab" role="tablist">
+    <button class="nav-link active" id="nav-home-tab" data-bs-toggle="tab" data-bs-target="#nav-home" type="button" role="tab" aria-controls="nav-home" aria-selected="true">Cluster access</button>
+    <button class="nav-link" id="nav-pod-tab" data-bs-toggle="tab" data-bs-target="#nav-pod" type="button" role="tab" aria-controls="nav-pod" aria-selected="false">Running pods</button>
+    <button class="nav-link" id="nav-ingress-tab" data-bs-toggle="tab" data-bs-target="#nav-ingress" type="button" role="tab" aria-controls="nav-ingress" aria-selected="false">Ingresses</button>
+    <button class="nav-link" id="nav-dev-tab" data-bs-toggle="tab" data-bs-target="#nav-dev" type="button" role="tab" aria-controls="nav-dev" aria-selected="false">Developing</button>
+  </div>
+</nav>
+<div class="tab-content" id="nav-tabContent">
+  <div class="tab-pane fade show active" id="nav-home" role="tabpanel" aria-labelledby="nav-home-tab">
+    <div class="modal fade" id="delete-confirmation" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Sandbox delete confirmation</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            Are you sure you want to delete sandbox {{ sandbox.namespace }}?
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <a href="/sandbox/{{ sandbox.namespace }}/delete" type="submit" class="btn btn-danger">Confirm</a>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
-
-<h2>Running pods</h2>
-
-<table class="table">
-  <thead>
-    <tr>
-      <th scope="col">Pod name</th>
-      <th scope="col">Status</th>
-      <th scope="col">Links</th>
-    </tr>
-  </thead>
-  <tbody>
-{% for pod in pods %}
-    <tr>
-      <td>{{ pod.metadata.name }}</td>
-      <td>{{ pod.status.phase }}</td>
-      <td>
-{% if sandbox.parameters.prometheus %}
-<a href="https://prom{{ sandbox.hostname_suffix }}/graph?g0.expr=%7Bnamespace%3D%22{{ namespace }}%22%2Cpod%3D%22{{ pod.metadata.name}}%22%7D&g0.tab=1&g0.stacked=0&g0.show_exemplars=0&g0.range_input=1h" class="btn btn-primary"><i class="fas fa-chart-line"></i></a>
-{% endif %}
-              <a href="https://log.codemowers.eu?kubernetes.namespace={{ namespace }}&kubernetes.pod.name={{ pod.metadata.name }}" class="btn btn-primary"><i class="fas fa-clock-rotate-left"></i></a>
-      </td>
-    </tr>
-{% endfor %}
-  </tbody>
-</table>
-
-{% for i in ingress %}
-{% for rule in i.spec.rules %}
-<a href="https://{{ rule.host }}" class="btn btn-info">{{ rule.host }}</a>
-{% endfor %}
-{% endfor %}
-
-<h2>Sandbox access</h2>
-<p>To configure cluster access run following snippet,
-it creates a Kubernetes client context named codemowers.eu/{{ sandbox.namespace }}:
-<pre>
+    <h2>Sandbox access</h2>
+    <p>To configure cluster access run following snippet,
+    it creates a Kubernetes client context named {{ args.context_name_prefix}}{{ sandbox.namespace }}:
+    <pre>
 cat << EOF > kubeconfig-new
 apiVersion: v1
 kind: Config
 clusters:
-  - name: kube.codemowers.eu
+  - name: {{ args.cluster_name }}
     cluster:
-      server: https://kube.codemowers.eu
+      server: {{ args.cluster_api_url }}
 contexts:
-  - name: codemowers.eu/{{ sandbox.namespace }}
+  - name: {{ args.context_name_prefix}}{{ sandbox.namespace }}
     context:
-      user: dex.codemowers.eu
-      cluster: kube.codemowers.eu
+      user: dex.{{ args.cluster_name }}
+      cluster: {{ args.cluster_name }}
       namespace: {{ sandbox.namespace }}
 users:
-  - name: dex.codemowers.eu
+  - name: dex.{{ args.cluster_name }}
     user:
       exec:
         apiVersion: client.authentication.k8s.io/v1beta1
@@ -96,7 +74,7 @@ users:
           - oidc-login
           - get-token
           - --listen-address=127.0.0.1:27890
-          - --oidc-issuer-url=https://dex.codemowers.eu
+          - --oidc-issuer-url=https://dex.{{ args.cluster_name }}
           - --oidc-client-id=kubelogin
           - --oidc-use-pkce
           - --oidc-extra-scope=profile,email,groups
@@ -104,39 +82,107 @@ EOF
 KUBECONFIG="$HOME/.kube/config:kubeconfig-new" kubectl config view --raw > kubeconfig-merged
 mv kubeconfig-merged $HOME/.kube/config
 rm -fv kubeconfig-new
-</pre>
-
-
-<h2>Frequently used commands:</h2>
-<pre>kubectl apply --context codemowers.eu/{{ sandbox.namespace }} -f foobar.yaml</pre>
-
-<pre>kubectl get pods --context codemowers.eu/{{ sandbox.namespace }}</pre>
-<pre>kubectl get deployments --context codemowers.eu/{{ sandbox.namespace }}</pre>
-<pre>kubectl get statefulsets --context codemowers.eu/{{ sandbox.namespace }}</pre>
-<pre>kubectl get svc --context codemowers.eu/{{ sandbox.namespace }}</pre>
-<pre>kubectl get ep --context codemowers.eu/{{ sandbox.namespace }}</pre>
-<pre>kubectl get ing --context codemowers.eu/{{ sandbox.namespace }}</pre>
-
-
-
-
-
-<h2>Developing with Skaffold</h2>
-<p>To <a href="https://skaffold.dev/docs/install/">Skaffold</a> develop using one of the template repositories for
-<a href="https://github.com/codemowers/hello-python">Flask</a>,
-<a href="https://github.com/codemowers/hello-nodejs">Express.js</a>:
-</p>
-
-<pre>skaffold dev --kube-context codemowers.eu/{{ sandbox.namespace }} --default-repo harbor.codemowers.eu/{{ sandbox.namespace }} --namespace {{ sandbox.namespace }}</pre>
-
-<h2>Building locally with Docker</h2>
-<p>In some cases you might want to have Skaffold run <pre>docker build</pre>
-locally. In that case you need to copy the Docker registry credentials from the cluster.
-
-
-<pre>cat ~/.docker/config.json | jq ".auths.\"harbor.codemowers.eu\".auth = \"$(kubectl get secret --context codemowers.eu/{{ sandbox.namespace }} kaniko-secret -o jsonpath='{.data.config\.json}' | base64 -d | jq -s '.[].auths."harbor.codemowers.eu".auth' -r)\"" > .dockerconfig.json && mv .dockerconfig.json ~/.docker/config.json</pre>
-
-<p>To reconfigure Skaffold either comment or remove `build.cluster` section in the `skaffold.yaml` file</p>
-
-
+    </pre>
+    <h2>Frequently used commands:</h2>
+    <pre>kubectl apply --context {{ args.context_name_prefix}}{{ sandbox.namespace }} -f foobar.yaml</pre>
+    <pre>kubectl get deployments --context {{ args.context_name_prefix}}{{ sandbox.namespace }}</pre>
+    <pre>kubectl get statefulsets --context {{ args.context_name_prefix}}{{ sandbox.namespace }}</pre>
+  </div>
+  <div class="tab-pane fade" id="nav-pod" role="tabpanel" aria-labelledby="nav-pod-tab">
+    <p>To interact on command line:</p>
+    <pre>kubectl get pods --context {{ args.context_name_prefix}}{{ sandbox.namespace }}</pre>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Pod name</th>
+          <th scope="col">Status</th>
+          <th scope="col">Links</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pod in pods %}
+        <tr>
+          <td>{{ pod.metadata.name }}</td>
+          <td>{{ pod.status.phase }}</td>
+          <td>
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#pod-snippets-{{ pod.metadata.name }}"><i class="fas fa-terminal"></i></button>
+            <div class="modal fade" id="pod-snippets-{{ pod.metadata.name }}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Command line snippets for this pod</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <p>Pod details:</p>
+                    <pre>kubectl get -o wide \
+    pod/{{ pod.metadata.name }} \
+      --context {{ args.context_name_prefix}}{{ sandbox.namespace }}</pre>
+                    <p>Pod status:</p>
+                    <pre>kubectl describe \
+    pod/{{ pod.metadata.name }} \
+      --context {{ args.context_name_prefix}}{{ sandbox.namespace }}</pre>
+                    <p>Pod logs:</p>
+                    <pre>kubectl logs \
+    pod/{{ pod.metadata.name }} \
+      --context {{ args.context_name_prefix}}{{ sandbox.namespace }}</pre>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% if sandbox.parameters.prometheus %}
+            <a href="https://prom{{ sandbox.hostname_suffix }}/graph?g0.expr=%7Bnamespace%3D%22{{ namespace }}%22%2Cpod%3D%22{{ pod.metadata.name}}%22%7D&g0.tab=1&g0.stacked=0&g0.show_exemplars=0&g0.range_input=1h" class="btn btn-primary" target="_blank"><i class="fas fa-chart-line"></i></a>
+            {% endif %}
+            <a href="https://log.codemowers.eu?kubernetes.namespace={{namespace}}&kubernetes.pod.name={{pod.metadata.name}}" class="btn btn-primary" target="_blank"><i class="fas fa-clock-rotate-left"></i></a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="tab-pane fade" id="nav-ingress" role="tabpanel" aria-labelledby="nav-ingress-tab">
+    <p>To list all <a href="https://kubernetes.io/docs/concepts/services-networking/service/" target="_blank">services</a> in this sandbox</p>
+    <pre>kubectl get svc --context {{ args.context_name_prefix}}{{ sandbox.namespace }}</pre>
+    <p>To list all <a href="https://kubernetes.io/docs/concepts/services-networking/service/#endpoints" target="_blank">endpoints</a> in this sandbox</p>
+    <pre>kubectl get ep --context {{ args.context_name_prefix}}{{ sandbox.namespace }}</pre>
+    <p>To list all <a href="https://kubernetes.io/docs/concepts/services-networking/ingress/" target="_blank">ingress rules</a> in this sandbox</p>
+    <pre>kubectl get ing --context {{ args.context_name_prefix}}{{ sandbox.namespace }}</pre>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">URL</th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in ingress %}
+        {% for rule in i.spec.rules %}
+        <tr>
+          <td><a href="https://{{ rule.host }}" target="_blank">{{ rule.host }}</a></td>
+          <td>&nbsp;</td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="tab-pane fade" id="nav-dev" role="tabpanel" aria-labelledby="nav-dev-tab">
+    <h2>Developing with Skaffold</h2>
+    <p>To <a href="https://skaffold.dev/docs/install/">Skaffold</a> develop using one of the template repositories for
+    <a href="https://github.com/codemowers/hello-python">Flask</a>,
+    <a href="https://github.com/codemowers/hello-nodejs">Express.js</a>:
+    </p>
+    <pre>skaffold dev --kube-context {{ args.context_name_prefix}}{{ sandbox.namespace }} --default-repo harbor.{{ args.context_name_prefix}}{{ sandbox.namespace }} --namespace {{ sandbox.namespace }}</pre>
+    <h2>Building locally with Docker</h2>
+    <p>In some cases you might want to have Skaffold run <pre>docker build</pre>
+    locally. In that case you need to copy the Docker registry credentials from the cluster.
+    <pre>cat ~/.docker/config.json | jq ".auths.\"harbor.codemowers.eu\".auth = \"$(kubectl get secret --context {{ args.context_name_prefix}}{{ sandbox.namespace }} kaniko-secret -o jsonpath='{.data.config\.json}' | base64 -d | jq -s '.[].auths."harbor.codemowers.eu".auth' -r)\"" > .dockerconfig.json && mv .dockerconfig.json ~/.docker/config.json</pre>
+    <p>To reconfigure Skaffold either comment or remove `build.cluster` section in the `skaffold.yaml` file</p>
+  </div>
+</div>
 {% endblock %}
