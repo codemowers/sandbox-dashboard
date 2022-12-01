@@ -4,6 +4,7 @@ import os
 import random
 import string
 import yaml
+from jinja2 import Template
 from functools import wraps
 from sanic import Sanic, response
 from kubernetes_asyncio.client.api_client import ApiClient
@@ -13,14 +14,6 @@ from sanic_wtf import SanicForm
 from wtforms import BooleanField
 
 parser = argparse.ArgumentParser(description="Run Kubernetes cluster sandbox dashboard")
-parser.add_argument("--cluster-name",
-    default="codemowers.eu")
-parser.add_argument("--cluster-api-url",
-    default="https://kube.codemowers.eu")
-parser.add_argument("--context-name-prefix",
-    default="codemowers.eu/")
-parser.add_argument("--sandbox-template-url",
-    default="git@git.k-space.ee:codemowers/lab-template")
 parser.add_argument("--feature-flags-spec",
     default="/config/playground.yml")
 args = parser.parse_args()
@@ -41,8 +34,12 @@ class PlaygroundForm(SanicForm):
 
 
 with open(args.feature_flags_spec) as fh:
-    feature_flags = yaml.safe_load(fh.read())
-    for feature_flag in feature_flags:
+    sandbox_config = yaml.safe_load(fh.read())
+    assert "cluster" in sandbox_config
+    assert "name" in sandbox_config["cluster"]
+    assert "server" in sandbox_config["cluster"]
+    assert "oidc-issuer-url" in sandbox_config["cluster"]
+    for feature_flag in sandbox_config["features"]:
         if feature_flag.get("disabled"):
             continue
         kwargs = {
@@ -128,7 +125,7 @@ async def create_sandbox(user, values):
         "spec": {
             "project": "default",
             "source": {
-                "repoURL": args.sandbox_template_url,
+                "repoURL": sandbox_config["template"],
                 "path": "./",
                 "targetRevision": "HEAD",
                 "helm": {
@@ -181,7 +178,7 @@ def wrap_sandbox_parameters(app):
     params = dict([(p["name"], p.get("value", "")) for p in app_helm.get("parameters", {})])
     subdomain = params.get("subdomain", "false").lower() == "true"
     return {
-        "namespace": app["spec"]["destination"]["namespace"],
+        "namespace": app["metadata"]["name"],
         "hostname_suffix": (".%s.codemowers.cloud" if subdomain else "-%s.codemowers.ee") % params.get("username"),
         "parameters": params
     }
@@ -207,11 +204,38 @@ async def sandbox_detail(request, sandbox_name):
         v1 = client.CoreV1Api(api)
         network_api = client.NetworkingV1Api(api)
         argo_app = await api_instance.get_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications", sandbox_name)
+        pods = [j.to_dict() for j in (await v1.list_namespaced_pod(sandbox_name)).items]
+        sandbox = wrap_sandbox_parameters(argo_app)
+        sandbox["cluster"] = sandbox_config["cluster"]
+
+        # Generate sandbox links
+        sandbox["links"] = []
+        for link in sandbox_config["sandboxLinks"]:
+            j = link.copy()
+            feature_flag = j.get("feature")
+            if feature_flag:
+                if not sandbox["parameters"].get(feature_flag):
+                    continue
+            j["url"] = Template(j["url"]).render({"sandbox": sandbox})
+            sandbox["links"].append(j)
+
+        # Generate pod links
+        for pod in pods:
+            pod["links"] = []
+            for link in sandbox_config["podLinks"]:
+                j = link.copy()
+                feature_flag = j.get("feature")
+                if feature_flag:
+                    if not sandbox["parameters"].get(feature_flag):
+                        continue
+                j["url"] = Template(j["url"]).render({"sandbox": sandbox})
+                pod["links"].append(j)
+
         return {
             "args": args,
             "namespace": sandbox_name,
-            "sandbox": wrap_sandbox_parameters(argo_app),
-            "pods": (await v1.list_namespaced_pod(sandbox_name)).items,
+            "sandbox": sandbox,
+            "pods": pods,
             "ingress": (await network_api.list_namespaced_ingress(sandbox_name)).items
         }
 
@@ -232,9 +256,10 @@ async def handler(request):
             w = wrap_sandbox_parameters(app)
             if not email or w["parameters"].get("email") == email:
                 sandboxes.append(w)
+            print("===>", app["metadata"]["name"])
         return {
             "args": args,
-            "feature_flags": feature_flags,
+            "feature_flags": sandbox_config["features"],
             "sandboxes": sandboxes
         }
 
