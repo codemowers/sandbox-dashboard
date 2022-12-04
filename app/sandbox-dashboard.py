@@ -104,7 +104,7 @@ async def create_sandbox(user, values):
     identifier = "".join([random.choice(characters) for _ in range(0, 5)])
     values.append({
         "name": "username",
-        "value": identifier
+        "value": user["metadata"]["name"]
     })
     values.append({
         "name": "email",
