@@ -265,7 +265,7 @@ async def handler(request):
             w = wrap_sandbox_parameters(app)
             if not email or w["parameters"].get("email") == email:
                 sandboxes.append(w)
-            print("===>", app["metadata"]["name"])
+
         return {
             "args": args,
             "feature_flags": sandbox_config["features"],
