@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import os
+import prometheus_async
 import random
 import yaml
 from jinja2 import Template
@@ -279,6 +280,7 @@ async def setup_db(app, loop):
         await config.load_kube_config()
     else:
         config.load_incluster_config()
+    app.add_task(prometheus_async.aio.web.start_http_server(port=5000))
 
 
 app.run(host="0.0.0.0", port=3001, single_process=True, motd=False)
