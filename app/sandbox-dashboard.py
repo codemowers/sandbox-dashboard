@@ -2,16 +2,29 @@
 import argparse
 import os
 import random
-import string
 import yaml
 from jinja2 import Template
 from functools import wraps
+from prometheus_client import Gauge
 from sanic import Sanic, response
 from kubernetes_asyncio.client.api_client import ApiClient
 from kubernetes_asyncio.client.exceptions import ApiException
 from kubernetes_asyncio import client, config
 from sanic_wtf import SanicForm
+from time import time
 from wtforms import BooleanField
+
+
+gauge_user_last_seen_timestamp = Gauge(
+    "sandbox_user_last_seen",
+    "Timestamp of last user interaction",
+    ["username"])
+
+
+HTTP_REQUEST_HEADER_USERNAME = os.getenv("HTTP_REQUEST_HEADER_USERNAME",
+    "X-Auth-Request-Preferred-Username")
+HTTP_REQUEST_HEADER_EMAIL = os.getenv("HTTP_REQUEST_HEADER_EMAIL",
+    "X-Auth-Request-Email")
 
 parser = argparse.ArgumentParser(description="Run Kubernetes cluster sandbox dashboard")
 parser.add_argument("--feature-flags-spec",
@@ -61,17 +74,14 @@ def login_required(*foo):
         @wraps(func)
         async def wrapped(request, *args, **kwargs):
             # TODO: Move to OIDC
-            email = request.headers.get("X-Forwarded-User", fallback_email)
+            preferred_username = request.headers.get(HTTP_REQUEST_HEADER_USERNAME)
+            email = request.headers.get(HTTP_REQUEST_HEADER_EMAIL)
             request.ctx.user = None
             async with ApiClient() as api:
                 api_instance = client.CustomObjectsApi(api)
-                resp = await api_instance.list_cluster_custom_object("codemowers.io", "v1alpha1", "clusterusers")
                 try:
-                    # TODO: Figure out better way to do this
-                    for user in resp["items"]:
-                        if user["spec"]["email"] == email:
-                            request.ctx.user = user
-                            break
+                    request.ctx.user = await api_instance.get_cluster_custom_object(
+                        "codemowers.io", "v1alpha1", "clusterusers", preferred_username)
                 except ApiException as e:
                     if e.status == 404:
                         pass
@@ -79,19 +89,18 @@ def login_required(*foo):
                         raise
 
                 if not request.ctx.user:
-                    j, _ = email.lower().split("@")
-                    username = "".join([x for x in j if x in string.ascii_letters])
                     body = {
                         "apiVersion": "codemowers.io/v1alpha1",
                         "kind": "ClusterUser",
                         "metadata": {
-                            "name": username
+                            "name": preferred_username
                         }, "spec": {
                             "email": email
                         }
                     }
                     request.ctx.user = await api_instance.create_cluster_custom_object(
                         "codemowers.io", "v1alpha1", "clusterusers", body)
+                gauge_user_last_seen_timestamp.labels(preferred_username).set(time())
                 return await func(request, *args, **kwargs)
         return wrapped
     return wrapper
