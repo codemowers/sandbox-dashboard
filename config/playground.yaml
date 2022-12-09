@@ -1,4 +1,6 @@
 template: git@git.k-space.ee:codemowers/lab-template
+registry:
+  hostname: harbor.codemowers.eu
 cluster:
   name: codemowers.eu
   server: https://kube.codemowers.eu

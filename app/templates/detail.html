@@ -181,12 +181,11 @@ pod/{{ pod.metadata.name }} \
     <a href="https://github.com/codemowers/hello-python">Flask</a>,
     <a href="https://github.com/codemowers/hello-nodejs">Express.js</a>:
     </p>
-    <pre>skaffold dev --kube-context {{ sandbox.cluster.name }}/{{ sandbox.namespace }} --default-repo harbor.{{ sandbox.cluster.name }}/{{ sandbox.namespace }} --namespace {{ sandbox.namespace }}</pre>
+    <pre>skaffold dev --kube-context {{ sandbox.cluster.name }}/{{ sandbox.namespace }} --default-repo {{ sandbox.registry.hostname }}/{{ sandbox.parameters.username }} --namespace {{ sandbox.namespace }}</pre>
     <h2>Building locally with Docker</h2>
-    <p>In some cases you might want to have Skaffold run <pre>docker build</pre>
-    locally. In that case you need to copy the Docker registry credentials from the cluster.
-    <pre>cat ~/.docker/config.json | jq ".auths.\"harbor.codemowers.eu\".auth = \"$(kubectl get secret --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }} kaniko-secret -o jsonpath='{.data.config\.json}' | base64 -d | jq -s '.[].auths."harbor.codemowers.eu".auth' -r)\"" > .dockerconfig.json && mv .dockerconfig.json ~/.docker/config.json</pre>
-    <p>To reconfigure Skaffold either comment or remove `build.cluster` section in the `skaffold.yaml` file</p>
+    <p>In some cases you might want to have Skaffold run <code>docker build</code>
+    locally. In that case create robot account at <a href="https://{{ sandbox.registry.hostname }}" target="_blank">Harbor</a> and issue <code>docker login {{ sandbox.registry.hostname }}</code> on your workstation.
+    <p>To reconfigure Skaffold either comment or remove <code>build.cluster</code> section in the <code>skaffold.yaml</code> file</p>
   </div>
 </div>
 {% endblock %}

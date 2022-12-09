@@ -28,7 +28,7 @@ HTTP_REQUEST_HEADER_EMAIL = os.getenv("HTTP_REQUEST_HEADER_EMAIL",
     "X-Auth-Request-Email")
 
 parser = argparse.ArgumentParser(description="Run Kubernetes cluster sandbox dashboard")
-parser.add_argument("--feature-flags-spec",
+parser.add_argument("--config",
     default="/config/playground.yml")
 args = parser.parse_args()
 
@@ -47,12 +47,14 @@ class PlaygroundForm(SanicForm):
     pass
 
 
-with open(args.feature_flags_spec) as fh:
+with open(args.config) as fh:
     sandbox_config = yaml.safe_load(fh.read())
     assert "cluster" in sandbox_config
     assert "name" in sandbox_config["cluster"]
     assert "server" in sandbox_config["cluster"]
     assert "oidc-issuer-url" in sandbox_config["cluster"]
+    assert "registry" in sandbox_config
+    assert "hostname" in sandbox_config["registry"]
     for feature_flag in sandbox_config["features"]:
         if feature_flag.get("disabled"):
             continue
@@ -217,6 +219,7 @@ async def sandbox_detail(request, sandbox_name):
         pods = [j.to_dict() for j in (await v1.list_namespaced_pod(sandbox_name)).items]
         sandbox = wrap_sandbox_parameters(argo_app)
         sandbox["cluster"] = sandbox_config["cluster"]
+        sandbox["registry"] = sandbox_config["registry"]
 
         # Generate sandbox links
         sandbox["links"] = []
