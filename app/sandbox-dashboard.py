@@ -111,7 +111,8 @@ def login_required(*foo):
 
 async def create_sandbox(user, values):
     labels = {
-        "codemowers.io/clusteruser": user["metadata"]["name"],
+        "owner": user["metadata"]["name"],
+        "env": "sandbox",
     }
     identifier = "".join([random.choice(characters) for _ in range(0, 5)])
     values.append({
@@ -262,7 +263,7 @@ async def handler(request):
         api_instance = client.CustomObjectsApi(api)
 
         sandboxes = []
-        for app in (await api_instance.list_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications"))["items"]:
+        for app in (await api_instance.list_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications", label_selector="env==sandbox"))["items"]:
             if "deletionTimestamp" in app["metadata"]:
                 # Hide sandboxes that are about to be deleted
                 continue
