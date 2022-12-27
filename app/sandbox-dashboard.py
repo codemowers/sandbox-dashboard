@@ -29,7 +29,7 @@ HTTP_REQUEST_HEADER_EMAIL = os.getenv("HTTP_REQUEST_HEADER_EMAIL",
 
 parser = argparse.ArgumentParser(description="Run Kubernetes cluster sandbox dashboard")
 parser.add_argument("--config",
-    default="/config/playground.yml")
+    default="/config/playground.yaml")
 args = parser.parse_args()
 
 ANNOTATION_MANAGED_BY = "sandbox-dashboard"
