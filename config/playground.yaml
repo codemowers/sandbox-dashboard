@@ -4,7 +4,7 @@ registry:
 cluster:
   name: codemowers.eu
   server: https://kube.codemowers.eu
-  oidc-issuer-url: https://dex.codemowers.eu
+  oidc-issuer-url: https://dex.codemowers.eu/
 sandboxLinks:
 - name: shared-longhorn
   icon: https://cncf-branding.netlify.app/img/projects/longhorn/icon/color/longhorn-icon-color.png

@@ -62,11 +62,11 @@ clusters:
 contexts:
   - name: {{ sandbox.cluster.name }}/{{ sandbox.namespace }}
     context:
-      user: {{ sandbox.cluster.oidc }}
+      user: {{ sandbox.cluster['oidc-issuer-url'] }}
       cluster: {{ sandbox.cluster.name }}
       namespace: {{ sandbox.namespace }}
 users:
-  - name: {{ sandbox.cluster.oidc }}
+  - name: {{ sandbox.cluster['oidc-issuer-url'] }}
     user:
       exec:
         apiVersion: client.authentication.k8s.io/v1beta1
