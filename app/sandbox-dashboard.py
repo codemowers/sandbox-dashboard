@@ -258,9 +258,47 @@ async def sandbox_detail(request, sandbox_name):
 @app.ext.template("main.html")
 @login_required()
 async def handler(request):
-    email = request.headers.get("X-Forwarded-User")
     async with ApiClient() as api:
         api_instance = client.CustomObjectsApi(api)
+        body = {
+            "apiVersion": "codemowers.io/v1alpha1",
+            "kind": "ClusterHarborProject",
+            "metadata": {
+                "name": request.ctx.user["metadata"]["name"]
+            }, "spec": {
+                "cache": False,
+                "public": False,
+                "quota": 2 * 1024 * 1024 * 1024
+            }
+        }
+        try:
+            request.ctx.user = await api_instance.create_cluster_custom_object(
+                "codemowers.io", "v1alpha1", "clusterharborprojects", body)
+        except ApiException as e:
+            if e.status == 409:
+                pass
+            else:
+                raise
+
+        body = {
+            "apiVersion": "codemowers.io/v1alpha1",
+            "kind": "ClusterHarborProjectMember",
+            "metadata": {
+                "name": request.ctx.user["metadata"]["name"]
+            }, "spec": {
+                "project": request.ctx.user["metadata"]["name"],
+                "username": request.ctx.user["metadata"]["name"],
+                "role": "PROJECT_ADMIN",
+            }
+        }
+        try:
+            request.ctx.user = await api_instance.create_cluster_custom_object(
+                "codemowers.io", "v1alpha1", "clusterharborprojectmembers", body)
+        except ApiException as e:
+            if e.status == 409:
+                pass
+            else:
+                raise
 
         sandboxes = []
         for app in (await api_instance.list_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications", label_selector="env==sandbox"))["items"]:
@@ -268,8 +306,7 @@ async def handler(request):
                 # Hide sandboxes that are about to be deleted
                 continue
             w = wrap_sandbox_parameters(app)
-            if not email or w["parameters"].get("email") == email:
-                sandboxes.append(w)
+            sandboxes.append(w)
 
         return {
             "args": args,
