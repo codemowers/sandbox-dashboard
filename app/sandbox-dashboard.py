@@ -77,7 +77,7 @@ def login_required(*foo):
         @wraps(func)
         async def wrapped(request, *args, **kwargs):
             # TODO: Move to OIDC
-            preferred_username = request.headers.get(HTTP_REQUEST_HEADER_USERNAME)
+            preferred_username = request.headers.get(HTTP_REQUEST_HEADER_USERNAME).lower()
             email = request.headers.get(HTTP_REQUEST_HEADER_EMAIL)
             request.ctx.user = None
             async with ApiClient() as api:
