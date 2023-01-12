@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
 
-{% block navbar %}
-<a href="/" class="btn btn-primary">Back to sandbox listing</a>
-{% endblock %}
-
 {% block content %}
-<h1>Sandbox {{ namespace }} details</h1>
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Sandboxes</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ sandbox.namespace }}</li>
+  </ol>
+</nav>
 
 {% for link in sandbox.links %}
 {% if link.icon.startswith("https://") %}
@@ -48,10 +49,11 @@
       </div>
     </div>
     <h2>Sandbox access</h2>
+    <p>Prerequisites for accessing the cluster are <a href="https://kubernetes.io/docs/tasks/tools/">kubectl</a> and <a href="https://github.com/int128/kubelogin#setup">kubelogin</a>. You might also want to try out <a href="https://k8slens.dev/">Kubernetes Lens</a>.</p>
     <p>To configure cluster access run following snippet,
     it creates a Kubernetes client context named {{ sandbox.cluster.name }}/{{ sandbox.namespace }}:
-    <pre>
-cat << EOF > kubeconfig-new
+
+<pre><code>cat << EOF > kubeconfig-new
 apiVersion: v1
 kind: Config
 clusters:
@@ -83,15 +85,16 @@ EOF
 KUBECONFIG="$HOME/.kube/config:kubeconfig-new" kubectl config view --raw > kubeconfig-merged
 mv kubeconfig-merged $HOME/.kube/config
 rm -fv kubeconfig-new
-    </pre>
+</code></pre>
+
     <h2>Frequently used commands:</h2>
-    <pre>kubectl apply --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }} -f foobar.yaml</pre>
-    <pre>kubectl get deployments --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</pre>
-    <pre>kubectl get statefulsets --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</pre>
+    <pre><code>kubectl apply --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }} -f foobar.yaml
+kubectl get deployments --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}
+kubectl get statefulsets --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
   </div>
   <div class="tab-pane fade" id="nav-pod" role="tabpanel" aria-labelledby="nav-pod-tab">
     <p>To interact on command line:</p>
-    <pre>kubectl get pods --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</pre>
+<pre><code>kubectl get pods --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
     <table class="table">
       <thead>
         <tr>
@@ -118,17 +121,17 @@ rm -fv kubeconfig-new
                   </div>
                   <div class="modal-body">
                     <p>Pod details:</p>
-                    <pre>kubectl get -o wide \
+                    <pre><code>kubectl get -o wide \
 pod/{{ pod.metadata.name }} \
-  --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</pre>
+  --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
                     <p>Pod status:</p>
-                    <pre>kubectl describe \
+                    <pre><code>kubectl describe \
 pod/{{ pod.metadata.name }} \
-  --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</pre>
+  --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
                     <p>Pod logs:</p>
-                    <pre>kubectl logs \
+                    <pre><code>kubectl logs \
 pod/{{ pod.metadata.name }} \
-  --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</pre>
+  --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
                   </div>
                   <div class="modal-footer">
                     <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
@@ -151,11 +154,11 @@ pod/{{ pod.metadata.name }} \
   </div>
   <div class="tab-pane fade" id="nav-ingress" role="tabpanel" aria-labelledby="nav-ingress-tab">
     <p>To list all <a href="https://kubernetes.io/docs/concepts/services-networking/service/" target="_blank">services</a> in this sandbox</p>
-    <pre>kubectl get svc --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</pre>
+    <pre><code>kubectl get svc --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
     <p>To list all <a href="https://kubernetes.io/docs/concepts/services-networking/service/#endpoints" target="_blank">endpoints</a> in this sandbox</p>
-    <pre>kubectl get ep --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</pre>
+    <pre><code>kubectl get ep --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
     <p>To list all <a href="https://kubernetes.io/docs/concepts/services-networking/ingress/" target="_blank">ingress rules</a> in this sandbox</p>
-    <pre>kubectl get ing --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</pre>
+    <pre><code>kubectl get ing --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
     <table class="table">
       <thead>
         <tr>
@@ -181,7 +184,7 @@ pod/{{ pod.metadata.name }} \
     <a href="https://github.com/codemowers/hello-python">Flask</a>,
     <a href="https://github.com/codemowers/hello-nodejs">Express.js</a>:
     </p>
-    <pre>skaffold dev --kube-context {{ sandbox.cluster.name }}/{{ sandbox.namespace }} --default-repo {{ sandbox.registry.hostname }}/{{ sandbox.parameters.username }} --namespace {{ sandbox.namespace }}</pre>
+    <pre><code>skaffold dev --kube-context {{ sandbox.cluster.name }}/{{ sandbox.namespace }} --default-repo {{ sandbox.registry.hostname }}/{{ sandbox.parameters.username }} --namespace {{ sandbox.namespace }}</code></pre>
     <h2>Building locally with Docker</h2>
     <p>In some cases you might want to have Skaffold run <code>docker build</code>
     locally. In that case create robot account at <a href="https://{{ sandbox.registry.hostname }}" target="_blank">Harbor</a> and issue <code>docker login {{ sandbox.registry.hostname }}</code> on your workstation.
