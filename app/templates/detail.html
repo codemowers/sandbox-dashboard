@@ -53,7 +53,8 @@
     <p>To configure cluster access run following snippet,
     it creates a Kubernetes client context named {{ sandbox.cluster.name }}/{{ sandbox.namespace }}:
 
-<pre><code>cat << EOF > kubeconfig-new
+<pre><code>mkdir -p ~/.kube
+cat << EOF > kubeconfig-new
 apiVersion: v1
 kind: Config
 clusters:
