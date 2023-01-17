@@ -39,7 +39,12 @@
             </button>
           </div>
           <div class="modal-body">
-            Are you sure you want to delete sandbox {{ sandbox.namespace }}?
+            <p>Are you sure you want to delete sandbox {{ sandbox.namespace }}?</p>
+            <p>To clean up your local configuration afterwards use:</p>
+            <pre><code>kubectl config unset contexts."{{ sandbox.cluster.name }}/{{ sandbox.namespace }}"</code></pre>
+            <p>If it's your last sandbox additionally issue:</p>
+            <pre><code>kubectl config unset clusters."{{ sandbox.cluster.name }}"
+kubectl config unset users."{{ sandbox.cluster['oidc-issuer-url'] }}"</code></pre>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
