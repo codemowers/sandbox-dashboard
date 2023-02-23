@@ -24,6 +24,10 @@
     <button class="nav-link active" id="nav-home-tab" data-bs-toggle="tab" data-bs-target="#nav-home" type="button" role="tab" aria-controls="nav-home" aria-selected="true">Cluster access</button>
     <button class="nav-link" id="nav-pod-tab" data-bs-toggle="tab" data-bs-target="#nav-pod" type="button" role="tab" aria-controls="nav-pod" aria-selected="false">Running pods</button>
     <button class="nav-link" id="nav-ingress-tab" data-bs-toggle="tab" data-bs-target="#nav-ingress" type="button" role="tab" aria-controls="nav-ingress" aria-selected="false">Ingresses</button>
+    <button class="nav-link" id="nav-mysqldatabase-tab" data-bs-toggle="tab" data-bs-target="#nav-mysqldatabase" type="button" role="tab" aria-controls="nav-mysqldatabase" aria-selected="false">MySQL</button>
+    <button class="nav-link" id="nav-postgresdatabase-tab" data-bs-toggle="tab" data-bs-target="#nav-postgresdatabase" type="button" role="tab" aria-controls="nav-postgresdatabase" aria-selected="false">Postgres</button>
+    <button class="nav-link" id="nav-bucket-tab" data-bs-toggle="tab" data-bs-target="#nav-bucket" type="button" role="tab" aria-controls="nav-bucket" aria-selected="false">Buckets</button>
+    <button class="nav-link" id="nav-redis-tab" data-bs-toggle="tab" data-bs-target="#nav-redis" type="button" role="tab" aria-controls="nav-redis" aria-selected="false">Redis</button>
     <button class="nav-link" id="nav-dev-tab" data-bs-toggle="tab" data-bs-target="#nav-dev" type="button" role="tab" aria-controls="nav-dev" aria-selected="false">Developing</button>
   </div>
 </nav>
@@ -184,6 +188,155 @@ pod/{{ pod.metadata.name }} \
       </tbody>
     </table>
   </div>
+
+  <div class="tab-pane fade" id="nav-mysqldatabase" role="tabpanel" aria-labelledby="nav-mysqldatabase-tab">
+    <h2>To list database instances</h2>
+    <pre><code>kubectl get mysqldatabases --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Class</th>
+          <th scope="col">Capacity</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in mysqldatabases %}
+        <tr>
+          <td>{{ o.metadata.name }}</td>
+          <td>{{ o.spec.class }}</td>
+          <td>{{ o.spec.capacity }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <h2>To instantiate database</h2>
+    {% for c in clustermysqldatabaseclasses %}
+    <p>{{ c.spec.description }}</p>
+    <pre><code>---
+apiVersion: codemowers.io/v1alpha1
+kind: MysqlDatabase
+metadata:
+  name: example-{{ c.metadata.name }}
+  namespace: {{ sandbox.namespace }}
+spec:
+  capacity: 1Gi
+  class: {{ c.metadata.name }}</code></pre>
+    {% endfor %}
+  </div>
+
+
+  <div class="tab-pane fade" id="nav-bucket" role="tabpanel" aria-labelledby="nav-bucket-tab">
+    <h2>To list buckets</h2>
+    <pre><code>kubectl get buckets --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Class</th>
+          <th scope="col">Capacity</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in buckets %}
+        <tr>
+          <td>{{ o.metadata.name }}</td>
+          <td>{{ o.spec.class }}</td>
+          <td>{{ o.spec.capacity }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    
+    <h2>To instantiate bucket</h2>
+    {% for c in clusterbucketclasses %}
+    <p>{{ c.spec.description }}</p>
+    <pre><code>---
+apiVersion: codemowers.io/v1alpha1
+kind: Bucket
+metadata:
+  name: example-{{ c.metadata.name }}
+  namespace: {{ sandbox.namespace }}
+spec:
+  capacity: 1Gi
+  class: {{ c.metadata.name }}</code></pre>
+    {% endfor %}
+  </div>
+
+  <div class="tab-pane fade" id="nav-postgresdatabase" role="tabpanel" aria-labelledby="nav-postgresdatabase-tab">
+    <h2>To list database instances</h2>
+    <pre><code>kubectl get postgresdatabases --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Class</th>
+          <th scope="col">Capacity</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in postgresdatabases %}
+        <tr>
+          <td>{{ o.metadata.name }}</td>
+          <td>{{ o.spec.class }}</td>
+          <td>{{ o.spec.capacity }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    
+    <h2>To instantiate database</h2>
+    {% for c in clusterpostgresdatabaseclasses %}
+    <p>{{ c.spec.description }}</p>
+    <pre><code>---
+apiVersion: codemowers.io/v1alpha1
+kind: PostgresDatabase
+metadata:
+  name: example-{{ c.metadata.name }}
+  namespace: {{ sandbox.namespace }}
+spec:
+  capacity: 1Gi
+  class: {{ c.metadata.name }}</code></pre>
+    {% endfor %}
+  </div>
+
+  <div class="tab-pane fade" id="nav-redis" role="tabpanel" aria-labelledby="nav-redis-tab">
+    <h2>To list database instances</h2>
+    <pre><code>kubectl get redises --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Class</th>
+          <th scope="col">Capacity</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in redises %}
+        <tr>
+          <td>{{ o.metadata.name }}</td>
+          <td>{{ o.spec.class }}</td>
+          <td>{{ o.spec.capacity }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <h2>To instantiate database</h2>
+    {% for c in clusterredisclasses %}
+    <p>{{ c.spec.description }}</p>
+    <pre><code>---
+apiVersion: codemowers.io/v1alpha1
+kind: redis
+metadata:
+  name: example-{{ c.metadata.name }}
+  namespace: {{ sandbox.namespace }}
+spec:
+  capacity: 1Gi
+  class: {{ c.metadata.name }}</code></pre>
+    {% endfor %}
+    
+  </div>
+  
   <div class="tab-pane fade" id="nav-dev" role="tabpanel" aria-labelledby="nav-dev-tab">
     <h2>Developing with Skaffold</h2>
     <p>To <a href="https://skaffold.dev/docs/install/">Skaffold</a> develop using one of the template repositories for

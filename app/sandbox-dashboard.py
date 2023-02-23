@@ -244,13 +244,32 @@ async def sandbox_detail(request, sandbox_name):
                         continue
                 j["url"] = Template(j["url"]).render({"sandbox": sandbox})
                 pod["links"].append(j)
-
         return {
             "args": args,
             "namespace": sandbox_name,
             "sandbox": sandbox,
             "pods": pods,
-            "ingress": (await network_api.list_namespaced_ingress(sandbox_name)).items
+            "ingress": (await network_api.list_namespaced_ingress(sandbox_name)).items,
+
+            "mysqldatabases": (await api_instance.list_namespaced_custom_object(
+                "codemowers.io", "v1alpha1", sandbox_name, "mysqldatabases"))["items"],
+            "clustermysqldatabaseclasses": (await api_instance.list_cluster_custom_object(
+                "codemowers.io", "v1alpha1", "clustermysqldatabaseclasses"))["items"],
+
+            "postgresdatabases": (await api_instance.list_namespaced_custom_object(
+                "codemowers.io", "v1alpha1", sandbox_name, "postgresdatabases"))["items"],
+            "clusterpostgresdatabaseclasses": (await api_instance.list_cluster_custom_object(
+                "codemowers.io", "v1alpha1", "clusterpostgresdatabaseclasses"))["items"],
+
+            "redises": (await api_instance.list_namespaced_custom_object(
+                "codemowers.io", "v1alpha1", sandbox_name, "redises"))["items"],
+            "clusterredisclasses": (await api_instance.list_cluster_custom_object(
+                "codemowers.io", "v1alpha1", "clusterredisclasses"))["items"],
+
+            "buckets": (await api_instance.list_namespaced_custom_object(
+                "codemowers.io", "v1alpha1", sandbox_name, "buckets"))["items"],
+            "clusterbucketclasses": (await api_instance.list_cluster_custom_object(
+                "codemowers.io", "v1alpha1", "clusterbucketclasses"))["items"]
         }
 
 
