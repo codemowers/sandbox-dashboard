@@ -339,9 +339,8 @@ spec:
   
   <div class="tab-pane fade" id="nav-dev" role="tabpanel" aria-labelledby="nav-dev-tab">
     <h2>Developing with Skaffold</h2>
-    <p>To <a href="https://skaffold.dev/docs/install/">Skaffold</a> develop using one of the template repositories for
-    <a href="https://github.com/codemowers/hello-python">Flask</a>,
-    <a href="https://github.com/codemowers/hello-nodejs">Express.js</a>:
+    <p>To <a href="https://skaffold.dev/docs/install/">Skaffold</a> develop using one of the
+    <a href="https://github.com/orgs/codemowers/repositories?q=hello">template repositories</a>:
     </p>
     <pre><code>skaffold dev --kube-context {{ sandbox.cluster.name }}/{{ sandbox.namespace }} --default-repo {{ sandbox.registry.hostname }}/{{ sandbox.parameters.username }} --namespace {{ sandbox.namespace }}</code></pre>
     <h2>Building locally with Docker</h2>
