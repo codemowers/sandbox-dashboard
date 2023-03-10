@@ -1,4 +1,4 @@
-FROM harbor.k-space.ee/k-space/microservice-base
+FROM codemowers/python
 ADD config /config
 ADD app /app
 WORKDIR /app
