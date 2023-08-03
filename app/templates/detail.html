@@ -27,6 +27,7 @@
     <button class="nav-link" id="nav-mysqldatabase-tab" data-bs-toggle="tab" data-bs-target="#nav-mysqldatabase" type="button" role="tab" aria-controls="nav-mysqldatabase" aria-selected="false">MySQL</button>
     <button class="nav-link" id="nav-postgresdatabase-tab" data-bs-toggle="tab" data-bs-target="#nav-postgresdatabase" type="button" role="tab" aria-controls="nav-postgresdatabase" aria-selected="false">Postgres</button>
     <button class="nav-link" id="nav-bucket-tab" data-bs-toggle="tab" data-bs-target="#nav-bucket" type="button" role="tab" aria-controls="nav-bucket" aria-selected="false">Buckets</button>
+    <button class="nav-link" id="nav-keydb-tab" data-bs-toggle="tab" data-bs-target="#nav-keydb" type="button" role="tab" aria-controls="nav-keydb" aria-selected="false">KeyDB</button>
     <button class="nav-link" id="nav-redis-tab" data-bs-toggle="tab" data-bs-target="#nav-redis" type="button" role="tab" aria-controls="nav-redis" aria-selected="false">Redis</button>
     <button class="nav-link" id="nav-dev-tab" data-bs-toggle="tab" data-bs-target="#nav-dev" type="button" role="tab" aria-controls="nav-dev" aria-selected="false">Developing</button>
   </div>
@@ -190,20 +191,22 @@ pod/{{ pod.metadata.name }} \
   </div>
 
   <div class="tab-pane fade" id="nav-mysqldatabase" role="tabpanel" aria-labelledby="nav-mysqldatabase-tab">
-    <h2>To list database instances</h2>
-    <pre><code>kubectl get mysqldatabases --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <h2>To list MySQL database claims</h2>
+    <pre><code>kubectl get mysqldatabaseclaims --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
     <table class="table">
       <thead>
         <tr>
           <th scope="col">Name</th>
+          <th scope="col">Phase</th>
           <th scope="col">Class</th>
           <th scope="col">Capacity</th>
         </tr>
       </thead>
       <tbody>
-        {% for o in mysqldatabases %}
+        {% for o in mysqldatabaseclaims %}
         <tr>
           <td>{{ o.metadata.name }}</td>
+          <td>{{ o.status.phase }}</td>
           <td>{{ o.spec.class }}</td>
           <td>{{ o.spec.capacity }}</td>
         </tr>
@@ -211,11 +214,11 @@ pod/{{ pod.metadata.name }} \
       </tbody>
     </table>
     <h2>To instantiate database</h2>
-    {% for c in clustermysqldatabaseclasses %}
+    {% for c in mysqldatabaseclasses %}
     <p>{{ c.spec.description }}</p>
     <pre><code>---
-apiVersion: codemowers.io/v1alpha1
-kind: MysqlDatabase
+apiVersion: codemowers.cloud/v1beta1
+kind: MysqlDatabaseClaim
 metadata:
   name: example-{{ c.metadata.name }}
   namespace: {{ sandbox.namespace }}
@@ -227,33 +230,35 @@ spec:
 
 
   <div class="tab-pane fade" id="nav-bucket" role="tabpanel" aria-labelledby="nav-bucket-tab">
-    <h2>To list buckets</h2>
-    <pre><code>kubectl get buckets --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <h2>To list bucket claims</h2>
+    <pre><code>kubectl get miniobucketclaims --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
     <table class="table">
       <thead>
         <tr>
           <th scope="col">Name</th>
+          <th scope="col">Phase</th>
           <th scope="col">Class</th>
           <th scope="col">Capacity</th>
         </tr>
       </thead>
       <tbody>
-        {% for o in buckets %}
+        {% for o in miniobucketclaims %}
         <tr>
           <td>{{ o.metadata.name }}</td>
+          <td>{{ o.status.phase }}</td>
           <td>{{ o.spec.class }}</td>
           <td>{{ o.spec.capacity }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-    
-    <h2>To instantiate bucket</h2>
-    {% for c in clusterbucketclasses %}
+
+    <h2>To claim bucket</h2>
+    {% for c in miniobucketclasses %}
     <p>{{ c.spec.description }}</p>
     <pre><code>---
-apiVersion: codemowers.io/v1alpha1
-kind: Bucket
+apiVersion: codemowers.cloud/v1beta1
+kind: MinioBucketClaim
 metadata:
   name: example-{{ c.metadata.name }}
   namespace: {{ sandbox.namespace }}
@@ -264,33 +269,35 @@ spec:
   </div>
 
   <div class="tab-pane fade" id="nav-postgresdatabase" role="tabpanel" aria-labelledby="nav-postgresdatabase-tab">
-    <h2>To list database instances</h2>
-    <pre><code>kubectl get postgresdatabases --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <h2>To list Postgres database claims</h2>
+    <pre><code>kubectl get postgresdatabaseclaims --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
     <table class="table">
       <thead>
         <tr>
           <th scope="col">Name</th>
+          <th scope="col">Phase</th>
           <th scope="col">Class</th>
           <th scope="col">Capacity</th>
         </tr>
       </thead>
       <tbody>
-        {% for o in postgresdatabases %}
+        {% for o in postgresdatabaseclaims %}
         <tr>
           <td>{{ o.metadata.name }}</td>
+          <td>{{ o.status.phase }}</td>
           <td>{{ o.spec.class }}</td>
           <td>{{ o.spec.capacity }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-    
-    <h2>To instantiate database</h2>
-    {% for c in clusterpostgresdatabaseclasses %}
+
+    <h2>To claim Postgres database</h2>
+    {% for c in postgresdatabaseclasses %}
     <p>{{ c.spec.description }}</p>
     <pre><code>---
-apiVersion: codemowers.io/v1alpha1
-kind: PostgresDatabase
+apiVersion: codemowers.cloud/v1beta1
+kind: PostgresDatabaseClaim
 metadata:
   name: example-{{ c.metadata.name }}
   namespace: {{ sandbox.namespace }}
@@ -301,42 +308,81 @@ spec:
   </div>
 
   <div class="tab-pane fade" id="nav-redis" role="tabpanel" aria-labelledby="nav-redis-tab">
-    <h2>To list database instances</h2>
-    <pre><code>kubectl get redises --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <h2>To list Redis claims</h2>
+    <pre><code>kubectl get redisclaims --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
     <table class="table">
       <thead>
         <tr>
           <th scope="col">Name</th>
+          <th scope="col">Phase</th>
           <th scope="col">Class</th>
           <th scope="col">Capacity</th>
         </tr>
       </thead>
       <tbody>
-        {% for o in redises %}
+        {% for o in redisclaims %}
         <tr>
           <td>{{ o.metadata.name }}</td>
+          <td>{{ o.status.phase }}</td>
           <td>{{ o.spec.class }}</td>
           <td>{{ o.spec.capacity }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-    <h2>To instantiate database</h2>
-    {% for c in clusterredisclasses %}
+    <h2>To claim Redis instance</h2>
+    {% for c in redisclasses %}
     <p>{{ c.spec.description }}</p>
     <pre><code>---
-apiVersion: codemowers.io/v1alpha1
-kind: redis
+apiVersion: codemowers.cloud/v1beta1
+kind: RedisClaim
 metadata:
   name: example-{{ c.metadata.name }}
   namespace: {{ sandbox.namespace }}
 spec:
-  capacity: 1Gi
+  capacity: 100Mi
   class: {{ c.metadata.name }}</code></pre>
     {% endfor %}
-    
   </div>
-  
+
+  <div class="tab-pane fade" id="nav-keydb" role="tabpanel" aria-labelledby="nav-keydb-tab">
+    <h2>To list KeyDB claims</h2>
+    <pre><code>kubectl get keydbclaims --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Phase</th>
+          <th scope="col">Class</th>
+          <th scope="col">Capacity</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in keydbclaims %}
+        <tr>
+          <td>{{ o.metadata.name }}</td>
+          <td>{{ o.status.phase }}</td>
+          <td>{{ o.spec.class }}</td>
+          <td>{{ o.spec.capacity }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <h2>To claim KeyDB instance</h2>
+    {% for c in keydbclasses %}
+    <p>{{ c.spec.description }}</p>
+    <pre><code>---
+apiVersion: codemowers.cloud/v1beta1
+kind: KeydbClaim
+metadata:
+  name: example-{{ c.metadata.name }}
+  namespace: {{ sandbox.namespace }}
+spec:
+  capacity: 100Mi
+  class: {{ c.metadata.name }}</code></pre>
+    {% endfor %}
+  </div>
+
   <div class="tab-pane fade" id="nav-dev" role="tabpanel" aria-labelledby="nav-dev-tab">
     <h2>Developing with Skaffold</h2>
     <p>To <a href="https://skaffold.dev/docs/install/">Skaffold</a> develop using one of the

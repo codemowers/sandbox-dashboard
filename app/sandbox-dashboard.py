@@ -23,9 +23,7 @@ gauge_user_last_seen_timestamp = Gauge(
 
 
 HTTP_REQUEST_HEADER_USERNAME = os.getenv("HTTP_REQUEST_HEADER_USERNAME",
-    "X-Auth-Request-Preferred-Username")
-HTTP_REQUEST_HEADER_EMAIL = os.getenv("HTTP_REQUEST_HEADER_EMAIL",
-    "X-Auth-Request-Email")
+    "Remote-Username")
 
 parser = argparse.ArgumentParser(description="Run Kubernetes cluster sandbox dashboard")
 parser.add_argument("--config",
@@ -77,33 +75,18 @@ def login_required(*foo):
         @wraps(func)
         async def wrapped(request, *args, **kwargs):
             # TODO: Move to OIDC
-            preferred_username = request.headers.get(HTTP_REQUEST_HEADER_USERNAME, "laurivosandi").lower()
-            email = request.headers.get(HTTP_REQUEST_HEADER_EMAIL)
+            username = request.headers.get(HTTP_REQUEST_HEADER_USERNAME, "u64690243n0").lower()
             request.ctx.user = None
             async with ApiClient() as api:
                 api_instance = client.CustomObjectsApi(api)
                 try:
-                    request.ctx.user = await api_instance.get_cluster_custom_object(
-                        "codemowers.io", "v1alpha1", "clusterusers", preferred_username)
+                    request.ctx.user = await api_instance.get_namespaced_custom_object(
+                        "codemowers.io", "v1alpha1", "default", "oidcgatewayusers", username)
                 except ApiException as e:
                     if e.status == 404:
-                        pass
+                        raise ValueError("No such user")
                     else:
                         raise
-
-                if not request.ctx.user:
-                    body = {
-                        "apiVersion": "codemowers.io/v1alpha1",
-                        "kind": "ClusterUser",
-                        "metadata": {
-                            "name": preferred_username
-                        }, "spec": {
-                            "email": email
-                        }
-                    }
-                    request.ctx.user = await api_instance.create_cluster_custom_object(
-                        "codemowers.io", "v1alpha1", "clusterusers", body)
-                gauge_user_last_seen_timestamp.labels(preferred_username).set(time())
                 return await func(request, *args, **kwargs)
         return wrapped
     return wrapper
@@ -170,8 +153,7 @@ async def create_sandbox(user, values):
         return name
 
 
-@app.get("/add")
-@app.post("/add")
+@app.route("/add", methods=["GET", "POST"])
 @app.ext.template("add.html")
 @login_required()
 async def add_sandbox_form(request):
@@ -251,25 +233,33 @@ async def sandbox_detail(request, sandbox_name):
             "pods": pods,
             "ingress": (await network_api.list_namespaced_ingress(sandbox_name)).items,
 
-            "mysqldatabases": (await api_instance.list_namespaced_custom_object(
-                "codemowers.io", "v1alpha1", sandbox_name, "mysqldatabases"))["items"],
-            "clustermysqldatabaseclasses": (await api_instance.list_cluster_custom_object(
-                "codemowers.io", "v1alpha1", "clustermysqldatabaseclasses"))["items"],
+            "secretclaims": (await api_instance.list_namespaced_custom_object(
+                "codemowers.cloud", "v1beta1", sandbox_name, "secretclaims"))["items"],
 
-            "postgresdatabases": (await api_instance.list_namespaced_custom_object(
-                "codemowers.io", "v1alpha1", sandbox_name, "postgresdatabases"))["items"],
-            "clusterpostgresdatabaseclasses": (await api_instance.list_cluster_custom_object(
-                "codemowers.io", "v1alpha1", "clusterpostgresdatabaseclasses"))["items"],
+            "mysqldatabaseclaims": (await api_instance.list_namespaced_custom_object(
+                "codemowers.cloud", "v1beta1", sandbox_name, "mysqldatabaseclaims"))["items"],
+            "mysqldatabaseclasses": (await api_instance.list_cluster_custom_object(
+                "codemowers.cloud", "v1beta1", "mysqldatabaseclasses"))["items"],
 
-            "redises": (await api_instance.list_namespaced_custom_object(
-                "codemowers.io", "v1alpha1", sandbox_name, "redises"))["items"],
-            "clusterredisclasses": (await api_instance.list_cluster_custom_object(
-                "codemowers.io", "v1alpha1", "clusterredisclasses"))["items"],
+            "postgresdatabaseclaims": (await api_instance.list_namespaced_custom_object(
+                "codemowers.cloud", "v1beta1", sandbox_name, "postgresdatabaseclaims"))["items"],
+            "postgresdatabaseclasses": (await api_instance.list_cluster_custom_object(
+                "codemowers.cloud", "v1beta1", "postgresdatabaseclasses"))["items"],
 
-            "buckets": (await api_instance.list_namespaced_custom_object(
-                "codemowers.io", "v1alpha1", sandbox_name, "buckets"))["items"],
-            "clusterbucketclasses": (await api_instance.list_cluster_custom_object(
-                "codemowers.io", "v1alpha1", "clusterbucketclasses"))["items"]
+            "keydbclaims": (await api_instance.list_namespaced_custom_object(
+                "codemowers.cloud", "v1beta1", sandbox_name, "keydbclaims"))["items"],
+            "keydbclasses": (await api_instance.list_cluster_custom_object(
+                "codemowers.cloud", "v1beta1", "keydbclasses"))["items"],
+
+            "redisclaims": (await api_instance.list_namespaced_custom_object(
+                "codemowers.cloud", "v1beta1", sandbox_name, "redisclaims"))["items"],
+            "redisclasses": (await api_instance.list_cluster_custom_object(
+                "codemowers.cloud", "v1beta1", "redisclasses"))["items"],
+
+            "miniobucketclaims": (await api_instance.list_namespaced_custom_object(
+                "codemowers.cloud", "v1beta1", sandbox_name, "miniobucketclaims"))["items"],
+            "miniobucketclasses": (await api_instance.list_cluster_custom_object(
+                "codemowers.cloud", "v1beta1", "miniobucketclasses"))["items"]
         }
 
 
@@ -279,6 +269,7 @@ async def sandbox_detail(request, sandbox_name):
 async def handler(request):
     async with ApiClient() as api:
         api_instance = client.CustomObjectsApi(api)
+        """
         body = {
             "apiVersion": "codemowers.io/v1alpha1",
             "kind": "ClusterHarborProject",
@@ -292,7 +283,7 @@ async def handler(request):
         }
         try:
             request.ctx.user = await api_instance.create_cluster_custom_object(
-                "codemowers.io", "v1alpha1", "clusterharborprojects", body)
+                "codemowers.cloud", "v1beta1", "clusterharborprojects", body)
         except ApiException as e:
             if e.status == 409:
                 pass
@@ -312,13 +303,13 @@ async def handler(request):
         }
         try:
             request.ctx.user = await api_instance.create_cluster_custom_object(
-                "codemowers.io", "v1alpha1", "clusterharborprojectmembers", body)
+                "codemowers.cloud", "v1beta1", "clusterharborprojectmembers", body)
         except ApiException as e:
             if e.status == 409:
                 pass
             else:
                 raise
-
+        """
         sandboxes = []
         for app in (await api_instance.list_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications", label_selector="env==sandbox"))["items"]:
             if "deletionTimestamp" in app["metadata"]:
@@ -342,5 +333,5 @@ async def setup_db(app, loop):
         config.load_incluster_config()
     app.add_task(prometheus_async.aio.web.start_http_server(port=5000))
 
-
-app.run(host="0.0.0.0", port=3001, single_process=True, motd=False)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=3001, single_process=True, motd=False)
