@@ -89,7 +89,7 @@ users:
           - get-token
           - --listen-address=127.0.0.1:27890
           - --oidc-issuer-url={{ sandbox.cluster['oidc-issuer-url'] }}
-          - --oidc-client-id=kubelogin
+          - --oidc-client-id={{ sandbox.cluster['oidc-client-id'] }}
           - --oidc-use-pkce
           - --oidc-extra-scope=profile,email,groups
 EOF
