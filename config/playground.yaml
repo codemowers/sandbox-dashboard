@@ -5,7 +5,8 @@ cluster:
   name: codemowers.eu
   server: https://kube.codemowers.eu
   oidc-issuer-url: https://auth.codemowers.eu/
-  oidc-client-id: default-kubelogin
+  oidc-client-id: default.kubelogin
+  zone-key: topology.kubernetes.io/zone
 sandboxLinks:
 - name: shared-longhorn
   icon: https://cncf-branding.netlify.app/img/projects/longhorn/icon/color/longhorn-icon-color.png

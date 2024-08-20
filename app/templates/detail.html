@@ -4,7 +4,7 @@
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="/">Sandboxes</a></li>
-    <li class="breadcrumb-item active" aria-current="page">{{ sandbox.namespace }}</li>
+    <li class="breadcrumb-item active" aria-current="page">{{ namespace }}</li>
   </ol>
 </nav>
 
@@ -24,11 +24,30 @@
     <button class="nav-link active" id="nav-home-tab" data-bs-toggle="tab" data-bs-target="#nav-home" type="button" role="tab" aria-controls="nav-home" aria-selected="true">Cluster access</button>
     <button class="nav-link" id="nav-pod-tab" data-bs-toggle="tab" data-bs-target="#nav-pod" type="button" role="tab" aria-controls="nav-pod" aria-selected="false">Running pods</button>
     <button class="nav-link" id="nav-ingress-tab" data-bs-toggle="tab" data-bs-target="#nav-ingress" type="button" role="tab" aria-controls="nav-ingress" aria-selected="false">Ingresses</button>
+{% if mysqldatabaseclasses %}
     <button class="nav-link" id="nav-mysqldatabase-tab" data-bs-toggle="tab" data-bs-target="#nav-mysqldatabase" type="button" role="tab" aria-controls="nav-mysqldatabase" aria-selected="false">MySQL</button>
+{% endif %}
+{% if postgresdatabaseclasses %}
     <button class="nav-link" id="nav-postgresdatabase-tab" data-bs-toggle="tab" data-bs-target="#nav-postgresdatabase" type="button" role="tab" aria-controls="nav-postgresdatabase" aria-selected="false">Postgres</button>
+{% endif %}
+{% if miniobucketclasses %}
     <button class="nav-link" id="nav-bucket-tab" data-bs-toggle="tab" data-bs-target="#nav-bucket" type="button" role="tab" aria-controls="nav-bucket" aria-selected="false">Buckets</button>
+{% endif %}
+{% if keydbclasses %}
     <button class="nav-link" id="nav-keydb-tab" data-bs-toggle="tab" data-bs-target="#nav-keydb" type="button" role="tab" aria-controls="nav-keydb" aria-selected="false">KeyDB</button>
+{% endif %}
+{% if redisclasses is defined %}
     <button class="nav-link" id="nav-redis-tab" data-bs-toggle="tab" data-bs-target="#nav-redis" type="button" role="tab" aria-controls="nav-redis" aria-selected="false">Redis</button>
+{% endif %}
+{% if dragonflies is defined %}
+    <button class="nav-link" id="nav-dragonfly-tab" data-bs-toggle="tab" data-bs-target="#nav-dragonfly" type="button" role="tab" aria-controls="nav-dragonfly" aria-selected="false">Dragonfly</button>
+{% endif %}
+{% if cnpgs is defined %}
+    <button class="nav-link" id="nav-cnpg-tab" data-bs-toggle="tab" data-bs-target="#nav-cnpg" type="button" role="tab" aria-controls="nav-cnpg" aria-selected="false">CloudNativePG</button>
+{% endif %}
+{% if mongodbs is defined %}
+    <button class="nav-link" id="nav-cnpg-tab" data-bs-toggle="tab" data-bs-target="#nav-mongodb" type="button" role="tab" aria-controls="nav-mongodb" aria-selected="false">MongoDB</button>
+{% endif %}
     <button class="nav-link" id="nav-dev-tab" data-bs-toggle="tab" data-bs-target="#nav-dev" type="button" role="tab" aria-controls="nav-dev" aria-selected="false">Developing</button>
   </div>
 </nav>
@@ -44,24 +63,26 @@
             </button>
           </div>
           <div class="modal-body">
-            <p>Are you sure you want to delete sandbox {{ sandbox.namespace }}?</p>
+            <p>Are you sure you want to delete sandbox {{ namespace }}?</p>
             <p>To clean up your local configuration afterwards use:</p>
-            <pre><code>kubectl config unset contexts."{{ sandbox.cluster.name }}/{{ sandbox.namespace }}"</code></pre>
+            <pre><code>kubectl config unset contexts."{{ sandbox.cluster.name }}/{{ namespace }}"</code></pre>
             <p>If it's your last sandbox additionally issue:</p>
             <pre><code>kubectl config unset clusters."{{ sandbox.cluster.name }}"
 kubectl config unset users."{{ sandbox.cluster['oidc-issuer-url'] }}"</code></pre>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <a href="/sandbox/{{ sandbox.namespace }}/delete" type="submit" class="btn btn-danger">Confirm</a>
+            <a href="/sandbox/{{ namespace }}/delete" type="submit" class="btn btn-danger">Confirm</a>
           </div>
         </div>
       </div>
     </div>
     <h2>Sandbox access</h2>
-    <p>Prerequisites for accessing the cluster are <a href="https://kubernetes.io/docs/tasks/tools/">kubectl</a> and <a href="https://github.com/int128/kubelogin#setup">kubelogin</a>. You might also want to try out <a href="https://k8slens.dev/">Kubernetes Lens</a>.</p>
+    <p>Prerequisites for accessing the cluster are <a href="https://kubernetes.io/docs/tasks/tools/">kubectl</a> and <a href="https://github.com/int128/kubelogin#setup">kubelogin</a>. You might also want to try out <a href="https://k8slens.dev/">Kubernetes Lens</a> and
+    <a href="https://k9scli.io/">k9s</a>.
+    </p>
     <p>To configure cluster access run following snippet,
-    it creates a Kubernetes client context named {{ sandbox.cluster.name }}/{{ sandbox.namespace }}:
+    it creates a Kubernetes client context named {{ sandbox.cluster.name }}/{{ namespace }}:
 
 <pre><code>mkdir -p ~/.kube
 cat << EOF > kubeconfig-new
@@ -73,11 +94,11 @@ clusters:
       server: {{ sandbox.cluster.server }}{% if sandbox.cluster['certificate-authority-data'] %}
       certificate-authority-data: {{ sandbox.cluster['certificate-authority-data'] }}{% endif %}
 contexts:
-  - name: {{ sandbox.cluster.name }}/{{ sandbox.namespace }}
+  - name: {{ sandbox.cluster.name }}/{{ namespace }}
     context:
       user: {{ sandbox.cluster['oidc-issuer-url'] }}
       cluster: {{ sandbox.cluster.name }}
-      namespace: {{ sandbox.namespace }}
+      namespace: {{ namespace }}
 users:
   - name: {{ sandbox.cluster['oidc-issuer-url'] }}
     user:
@@ -99,13 +120,13 @@ rm -fv kubeconfig-new
 </code></pre>
 
     <h2>Frequently used commands:</h2>
-    <pre><code>kubectl apply --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }} -f foobar.yaml
-kubectl get deployments --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}
-kubectl get statefulsets --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <pre><code>kubectl apply --context {{ sandbox.cluster.name }}/{{ namespace }} -f foobar.yaml
+kubectl get deployments --context {{ sandbox.cluster.name }}/{{ namespace }}
+kubectl get statefulsets --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
   </div>
   <div class="tab-pane fade" id="nav-pod" role="tabpanel" aria-labelledby="nav-pod-tab">
     <p>To interact on command line:</p>
-<pre><code>kubectl get pods --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+<pre><code>kubectl get pods --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
     <table class="table">
       <thead>
         <tr>
@@ -134,15 +155,15 @@ kubectl get statefulsets --context {{ sandbox.cluster.name }}/{{ sandbox.namespa
                     <p>Pod details:</p>
                     <pre><code>kubectl get -o wide \
 pod/{{ pod.metadata.name }} \
-  --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+  --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
                     <p>Pod status:</p>
                     <pre><code>kubectl describe \
 pod/{{ pod.metadata.name }} \
-  --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+  --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
                     <p>Pod logs:</p>
                     <pre><code>kubectl logs \
 pod/{{ pod.metadata.name }} \
-  --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+  --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
                   </div>
                   <div class="modal-footer">
                     <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
@@ -165,11 +186,11 @@ pod/{{ pod.metadata.name }} \
   </div>
   <div class="tab-pane fade" id="nav-ingress" role="tabpanel" aria-labelledby="nav-ingress-tab">
     <p>To list all <a href="https://kubernetes.io/docs/concepts/services-networking/service/" target="_blank">services</a> in this sandbox</p>
-    <pre><code>kubectl get svc --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <pre><code>kubectl get svc --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
     <p>To list all <a href="https://kubernetes.io/docs/concepts/services-networking/service/#endpoints" target="_blank">endpoints</a> in this sandbox</p>
-    <pre><code>kubectl get ep --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <pre><code>kubectl get ep --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
     <p>To list all <a href="https://kubernetes.io/docs/concepts/services-networking/ingress/" target="_blank">ingress rules</a> in this sandbox</p>
-    <pre><code>kubectl get ing --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <pre><code>kubectl get ing --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
     <table class="table">
       <thead>
         <tr>
@@ -190,9 +211,10 @@ pod/{{ pod.metadata.name }} \
     </table>
   </div>
 
+{% if mysqldatabaseclasses %}
   <div class="tab-pane fade" id="nav-mysqldatabase" role="tabpanel" aria-labelledby="nav-mysqldatabase-tab">
     <h2>To list MySQL database claims</h2>
-    <pre><code>kubectl get mysqldatabaseclaims --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <pre><code>kubectl get mysqldatabaseclaims --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
     <table class="table">
       <thead>
         <tr>
@@ -206,7 +228,7 @@ pod/{{ pod.metadata.name }} \
         {% for o in mysqldatabaseclaims %}
         <tr>
           <td>{{ o.metadata.name }}</td>
-          <td>{{ o.status.phase }}</td>
+          <td>{% if o.status %}{{ o.status.phase }}{% else %}&nbsp;{% endif %}</td>
           <td>{{ o.spec.class }}</td>
           <td>{{ o.spec.capacity }}</td>
         </tr>
@@ -215,23 +237,25 @@ pod/{{ pod.metadata.name }} \
     </table>
     <h2>To instantiate database</h2>
     {% for c in mysqldatabaseclasses %}
-    <p>{{ c.spec.description }}</p>
+    <h3>Class {{ c.metadata.name }}</h3>
+    <p>{{ c.metadata.annotations.get('kubernetes.io/description', '') }}</p>
     <pre><code>---
 apiVersion: codemowers.cloud/v1beta1
 kind: MysqlDatabaseClaim
 metadata:
   name: example-{{ c.metadata.name }}
-  namespace: {{ sandbox.namespace }}
+  namespace: {{ namespace }}
 spec:
   capacity: 1Gi
   class: {{ c.metadata.name }}</code></pre>
     {% endfor %}
   </div>
+{% endif %}
 
-
+{% if miniobucketclasses %}
   <div class="tab-pane fade" id="nav-bucket" role="tabpanel" aria-labelledby="nav-bucket-tab">
     <h2>To list bucket claims</h2>
-    <pre><code>kubectl get miniobucketclaims --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <pre><code>kubectl get miniobucketclaims --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
     <table class="table">
       <thead>
         <tr>
@@ -245,7 +269,7 @@ spec:
         {% for o in miniobucketclaims %}
         <tr>
           <td>{{ o.metadata.name }}</td>
-          <td>{{ o.status.phase }}</td>
+          <td>{% if o.status %}{{ o.status.phase }}{% else %}&nbsp;{% endif %}</td>
           <td>{{ o.spec.class }}</td>
           <td>{{ o.spec.capacity }}</td>
         </tr>
@@ -255,22 +279,25 @@ spec:
 
     <h2>To claim bucket</h2>
     {% for c in miniobucketclasses %}
-    <p>{{ c.spec.description }}</p>
+    <h3>Class {{ c.metadata.name }}</h3>
+    <p>{{ c.metadata.annotations.get('kubernetes.io/description', '') }}</p>
     <pre><code>---
 apiVersion: codemowers.cloud/v1beta1
 kind: MinioBucketClaim
 metadata:
   name: example-{{ c.metadata.name }}
-  namespace: {{ sandbox.namespace }}
+  namespace: {{ namespace }}
 spec:
   capacity: 1Gi
   class: {{ c.metadata.name }}</code></pre>
     {% endfor %}
   </div>
+{% endif %}
 
+{% if postgresdatabaseclasses %}
   <div class="tab-pane fade" id="nav-postgresdatabase" role="tabpanel" aria-labelledby="nav-postgresdatabase-tab">
     <h2>To list Postgres database claims</h2>
-    <pre><code>kubectl get postgresdatabaseclaims --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <pre><code>kubectl get postgresdatabaseclaims --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
     <table class="table">
       <thead>
         <tr>
@@ -284,7 +311,7 @@ spec:
         {% for o in postgresdatabaseclaims %}
         <tr>
           <td>{{ o.metadata.name }}</td>
-          <td>{{ o.status.phase }}</td>
+          <td>{% if o.status %}{{ o.status.phase }}{% else %}&nbsp;{% endif %}</td>
           <td>{{ o.spec.class }}</td>
           <td>{{ o.spec.capacity }}</td>
         </tr>
@@ -294,22 +321,25 @@ spec:
 
     <h2>To claim Postgres database</h2>
     {% for c in postgresdatabaseclasses %}
-    <p>{{ c.spec.description }}</p>
+    <h3>Class {{ c.metadata.name }}</h3>
+    <p>{{ c.metadata.annotations.get('kubernetes.io/description', '') }}</p>
     <pre><code>---
 apiVersion: codemowers.cloud/v1beta1
 kind: PostgresDatabaseClaim
 metadata:
   name: example-{{ c.metadata.name }}
-  namespace: {{ sandbox.namespace }}
+  namespace: {{ namespace }}
 spec:
   capacity: 1Gi
   class: {{ c.metadata.name }}</code></pre>
     {% endfor %}
   </div>
+{% endif %}
 
+{% if redisclasses is defined %}
   <div class="tab-pane fade" id="nav-redis" role="tabpanel" aria-labelledby="nav-redis-tab">
     <h2>To list Redis claims</h2>
-    <pre><code>kubectl get redisclaims --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <pre><code>kubectl get redisclaims --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
     <table class="table">
       <thead>
         <tr>
@@ -323,7 +353,7 @@ spec:
         {% for o in redisclaims %}
         <tr>
           <td>{{ o.metadata.name }}</td>
-          <td>{{ o.status.phase }}</td>
+          <td>{% if o.status %}{{ o.status.phase }}{% else %}&nbsp;{% endif %}</td>
           <td>{{ o.spec.class }}</td>
           <td>{{ o.spec.capacity }}</td>
         </tr>
@@ -332,22 +362,25 @@ spec:
     </table>
     <h2>To claim Redis instance</h2>
     {% for c in redisclasses %}
-    <p>{{ c.spec.description }}</p>
+    <h3>Class {{ c.metadata.name }}</h3>
+    <p>{{ c.metadata.annotations.get('kubernetes.io/description', '') }}</p>
     <pre><code>---
 apiVersion: codemowers.cloud/v1beta1
 kind: RedisClaim
 metadata:
   name: example-{{ c.metadata.name }}
-  namespace: {{ sandbox.namespace }}
+  namespace: {{ namespace }}
 spec:
   capacity: 100Mi
   class: {{ c.metadata.name }}</code></pre>
     {% endfor %}
   </div>
+{% endif %}
 
+{% if keydbclasses is defined %}
   <div class="tab-pane fade" id="nav-keydb" role="tabpanel" aria-labelledby="nav-keydb-tab">
     <h2>To list KeyDB claims</h2>
-    <pre><code>kubectl get keydbclaims --context {{ sandbox.cluster.name }}/{{ sandbox.namespace }}</code></pre>
+    <pre><code>kubectl get keydbclaims --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
     <table class="table">
       <thead>
         <tr>
@@ -361,7 +394,7 @@ spec:
         {% for o in keydbclaims %}
         <tr>
           <td>{{ o.metadata.name }}</td>
-          <td>{{ o.status.phase }}</td>
+          <td>{% if o.status %}{{ o.status.phase }}{% else %}&nbsp;{% endif %}</td>
           <td>{{ o.spec.class }}</td>
           <td>{{ o.spec.capacity }}</td>
         </tr>
@@ -370,25 +403,457 @@ spec:
     </table>
     <h2>To claim KeyDB instance</h2>
     {% for c in keydbclasses %}
-    <p>{{ c.spec.description }}</p>
+    <h3>Class {{ c.metadata.name }}</h3>
+    <p>{{ c.metadata.annotations.get('kubernetes.io/description', '') }}</p>
     <pre><code>---
 apiVersion: codemowers.cloud/v1beta1
 kind: KeydbClaim
 metadata:
   name: example-{{ c.metadata.name }}
-  namespace: {{ sandbox.namespace }}
+  namespace: {{ namespace }}
 spec:
   capacity: 100Mi
   class: {{ c.metadata.name }}</code></pre>
     {% endfor %}
   </div>
+{% endif %}
+
+{% if dragonflies is defined %}
+  <div class="tab-pane fade" id="nav-dragonfly" role="tabpanel" aria-labelledby="nav-dragonfly-tab">
+    <h2>DragonflyDB operator</h2>
+    DragonflyDB is a modern Redis rewrite which fits nicely into Kubernetes ecosystem.
+    In this case the pods appear in the same namespace as the provisioned definitions.
+
+    <h2>To list Dragonfly clusters</h2>
+    <pre><code>kubectl get dragonflies.dragonflydb.io --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Phase</th>
+          <th scope="col">Replicas</th>
+          <th scope="col">Capacity</th>
+          <th scope="col">Persistence</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in dragonflies %}
+        <tr>
+          <td>{{ o.metadata.name }}</td>
+          <td>{% if o.status %}{{ o.status.phase }}{% else %}&nbsp;{% endif %}</td>
+          <td>{{ o.spec.replicas }}</td>
+          <td>{{ o.spec.resources.limits.memory }}</td>
+          <td>
+          {% if o.spec.snapshot and o.spec.snapshot.persistentVolumeClaimSpec.resources.requests %}
+          {{ o.spec.snapshot.persistentVolumeClaimSpec.resources.requests.storage }}
+          {% else %}
+          -
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <h2>To instantiate Dragonfly cluster</h2>
+
+    <p>For more details on how to configure the cluster,
+    refer to
+    <a href="https://www.dragonflydb.io/docs/managing-dragonfly/operator/dragonfly-configuration">official Dragonfly operator documentation</a>.</p>
+    {% for mode in ("Ephemeral", "Persistent") %}
+    <p>{{ mode }}:</p>
+
+    <pre><code>---
+apiVersion: codemowers.cloud/v1beta1
+kind: SecretClaim
+metadata:
+  name: dragonfly-{{ mode | lower }}
+  namespace: {{ namespace }}
+spec:
+  size: 32
+  mapping:
+    - key: password
+      value: "%(plaintext)s"
+    - key: REDIS_URI
+      value: "redis://:%(plaintext)s@dragonfly-{{ mode | lower }}"
+---
+apiVersion: dragonflydb.io/v1alpha1
+kind: Dragonfly
+metadata:
+  name: dragonfly-{{ mode | lower }}
+  namespace: {{ namespace }}
+spec:
+  image: "docker.dragonflydb.io/dragonflydb/dragonfly:v1.21.2@sha256:4a253dffa1f0416c454a758dcbaa86c29c4065aba44b5240fa25e55c5d89baf3"
+  authentication:
+    passwordFromSecret:
+      key: password
+      name: dragonfly-{{ mode | lower }}
+  replicas: 3
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: {{ sandbox.cluster['zone-key'] }}
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app: dragonfly-{{ mode | lower }}
+          app.kubernetes.io/part-of: dragonfly
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+    requests:
+      memory: 512Mi{% if mode == "Persistent" %}
+  snapshot:
+    cron: "0 * * * *"
+    persistentVolumeClaimSpec:
+      storageClassName: redis
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi{% endif %}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: dragonfly-{{ mode | lower }}
+spec:
+  selector:
+    matchLabels:
+      app: dragonfly-{{ mode | lower }}
+      app.kubernetes.io/part-of: dragonfly
+  podTargetLabels:
+    - app
+  podMetricsEndpoints:
+    - port: admin
+  </code></pre>
+      {% endfor %}
+  </div>
+{% endif %}
+
+
+
+{% if cnpgs is defined %}
+  <div class="tab-pane fade" id="nav-cnpg" role="tabpanel" aria-labelledby="nav-cnpg-tab">
+    <h2>CloudNativePG</h2>
+    CloudNativePG is one of many ways to run Postgres in Kubernetes cluster
+    in a highly available fashion.
+    In this case the Postgres pods appear in the same Kubernetes namespace
+    as the provisioned definitions.
+
+
+
+    <h2>To list CloudNativePG clusters</h2>
+    <pre><code>kubectl get clusters.postgresql.cnpg.io --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Phase</th>
+          <th scope="col">Replicas</th>
+          <th scope="col">Capacity</th>
+          <th scope="col">Persistence</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in cnpgs %}
+        <tr>
+          <td>{{ o.metadata.name }}</td>
+          <td>{% if o.status %}{{ o.status.phase }}{% else %}&nbsp;{% endif %}</td>
+          <td>{{ o.spec.replicas }}</td>
+          <td>{{ o.spec.resources.limits.memory }}</td>
+          <td>
+          {% if o.spec.snapshot and o.spec.snapshot.persistentVolumeClaimSpec.resources.requests %}
+          {{ o.spec.snapshot.persistentVolumeClaimSpec.resources.requests.storage }}
+          {% else %}
+          -
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <h2>To instantiate CloudNativePG cluster</h2>
+
+    <p>For more details on how to configure the cluster,
+    refer to
+    <a href="https://cloudnative-pg.io/docs/">official CloudNativePG operator documentation</a>.</p>
+
+    <pre><code>---
+apiVersion: codemowers.cloud/v1beta1
+kind: SecretClaim
+metadata:
+  name: foobar-user
+  namespace: {{ namespace }}
+spec:
+  size: 32
+  mapping:
+    - key: username
+      value: foobar-user
+    - key: password
+      value: "%(plaintext)s"
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: SecretClaim
+metadata:
+  name: foobar-superuser
+  namespace: {{ namespace }}
+spec:
+  size: 32
+  mapping:
+    - key: username
+      value: "homer"
+    - key: password
+      value: "%(plaintext)s"
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: foobar
+  namespace: {{ namespace }}
+spec:
+  instances: 3
+  imageName: "ghcr.io/cloudnative-pg/postgresql:16.4@sha256:f0dc7c50d52f2ff976b94201e78d47a919c838318c3e6ae676dbec67261ef7d8"
+  primaryUpdateStrategy: unsupervised
+  bootstrap:
+    initdb:
+      database: app
+      owner: foobar-user
+      secret:
+        name: foobar-user
+  superuserSecret:
+    name: foobar-superuser
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: {{ sandbox.cluster['zone-key'] }}
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "1"
+    limits:
+      memory: "1Gi"
+      cpu: "2"
+  storage:
+    size: 1Gi
+    pvcTemplate:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: postgres
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: foobar
+  namespace: {{ namespace }}
+spec:
+  selector:
+    matchLabels:
+      postgresql: foobar
+  podMetricsEndpoints:
+    - port: metrics
+  </code></pre>
+  </div>
+{% endif %}
+
+
+{% if mongodbs is defined %}
+  <div class="tab-pane fade" id="nav-mongodb" role="tabpanel" aria-labelledby="nav-mongodb-tab">
+    <h2>MongoDB operator</h2>
+    MongoDB Community Operator is one of the ways to run Mongo in Kubernetes cluster.
+    In this case the MongoDB pods appear in the same Kubernetes namespace
+    as the provisioned definitions.
+
+    <h2>To list MongoDB clusters</h2>
+    <pre><code>kubectl get mongodbcommunity.mongodbcommunity.mongodb.com --context {{ sandbox.cluster.name }}/{{ namespace }}</code></pre>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Phase</th>
+          <th scope="col">Members</th>
+          <th scope="col">Arbiters</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in mongodbs %}
+        <tr>
+          <td>{{ o.metadata.name }}</td>
+          <td>{% if o.status %}{{ o.status.phase }}{% else %}&nbsp;{% endif %}</td>
+          <td>{{ o.spec.members }}</td>
+          <td>{{ o.spec.arbiters }}</td>
+          <td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <h2>To instantiate MongoDB cluster</h2>
+
+    <p>For more details on how to configure the cluster,
+    refer to
+    <a href="https://github.com/mongodb/mongodb-kubernetes-operator/blob/master/README.md">official MongoDB operator documentation</a>.</p>
+
+    <pre><code>---
+apiVersion: codemowers.cloud/v1beta1
+kind: SecretClaim
+metadata:
+  name: example-mongo-readwrite-password
+  namespace: {{ namespace }}
+spec:
+  mapping:
+    - key: password
+      value: "%(plaintext)s"
+---
+apiVersion: codemowers.cloud/v1beta1
+kind: SecretClaim
+metadata:
+  name: example-mongo-metrics
+  namespace: {{ namespace }}
+spec:
+  mapping:
+    - key: username
+      value: "prometheus"
+    - key: password
+      value: "%(plaintext)s"
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: exampe-mongo
+  namespace: {{ namespace }}
+spec:
+  endpoints:
+  - basicAuth:
+      password:
+        key: password
+        name: example-mongo-metrics
+      username:
+        key: username
+        name: example-mongo-metrics
+    port: prometheus
+    scheme: http
+  selector:
+    matchLabels:
+      app: exampe-mongo-svc
+---
+apiVersion: mongodbcommunity.mongodb.com/v1
+kind: MongoDBCommunity
+metadata:
+  name: example-mongodb
+  namespace: {{ namespace }}
+spec:
+  members: 2
+  arbiters: 1
+  type: ReplicaSet
+  version: "7.0.12"
+  security:
+    authentication:
+      modes:
+        - SCRAM
+  users:
+    - name: readwrite
+      db: example-database
+      passwordSecretRef:
+        name: example-mongo-readwrite-password
+      roles:
+        - name: readWrite
+          db: example-database
+      scramCredentialsSecretName: example-mongo-readwrite
+  prometheus:
+    username: prometheus
+    passwordSecretRef:
+      name: example-mongo-metrics
+  statefulSet:
+    spec:
+      agent:
+        logFile: /dev/stdout
+      template:
+        spec:
+          containers:
+            - name: mongod
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 1Gi
+                limits:
+                  cpu: 4000m
+                  memory: 1Gi
+            - name: mongodb-agent
+              resources:
+                requests:
+                  cpu: 1m
+                  memory: 100Mi
+                limits: {}
+          affinity:
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchExpressions:
+                      - key: app
+                        operator: In
+                        values:
+                          - example-mongodb-svc
+                  topologyKey: {{ sandbox.cluster['zone-key'] }}
+      volumeClaimTemplates:
+        - metadata:
+            name: data-volume
+          spec:
+            storageClassName: mongo
+            accessModes:
+            - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mongodb-database
+  namespace: {{ namespace }}
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: mongodb-database
+  namespace: {{ namespace }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - patch
+      - delete
+      - get
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: mongodb-database
+  namespace: {{ namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: mongodb-database
+roleRef:
+  kind: Role
+  name: mongodb-database
+  apiGroup: rbac.authorization.k8s.io
+  </code></pre>
+  </div>
+{% endif %}
+
 
   <div class="tab-pane fade" id="nav-dev" role="tabpanel" aria-labelledby="nav-dev-tab">
     <h2>Developing with Skaffold</h2>
     <p>To <a href="https://skaffold.dev/docs/install/">Skaffold</a> develop using one of the
     <a href="https://github.com/orgs/codemowers/repositories?q=hello">template repositories</a>:
     </p>
-    <pre><code>skaffold dev --kube-context {{ sandbox.cluster.name }}/{{ sandbox.namespace }} --default-repo {{ sandbox.registry.hostname }}/{{ sandbox.parameters.username }} --namespace {{ sandbox.namespace }}</code></pre>
+    <pre><code>skaffold dev --kube-context {{ sandbox.cluster.name }}/{{ namespace }} --default-repo {{ sandbox.registry.hostname }}/{{ sandbox.owner }} --namespace {{ namespace }}</code></pre>
     <h2>Building locally with Docker</h2>
     <p>In some cases you might want to have Skaffold run <code>docker build</code>
     locally. In that case create robot account at <a href="https://{{ sandbox.registry.hostname }}" target="_blank">Harbor</a> and issue <code>docker login {{ sandbox.registry.hostname }}</code> on your workstation.

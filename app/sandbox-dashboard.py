@@ -32,7 +32,6 @@ args = parser.parse_args()
 
 ANNOTATION_MANAGED_BY = "sandbox-dashboard"
 
-fallback_email = "lauri.vosandi@gmail.com"
 characters = "abcdefghijkmnpqrstuvwxyz23456789"
 app = Sanic("dashboard")
 session = {}
@@ -75,13 +74,13 @@ def login_required(*foo):
         @wraps(func)
         async def wrapped(request, *args, **kwargs):
             # TODO: Move to OIDC
-            username = request.headers.get(HTTP_REQUEST_HEADER_USERNAME, "u64690243n0").lower()
+            username = request.headers.get(HTTP_REQUEST_HEADER_USERNAME, "lauri").lower()
             request.ctx.user = None
             async with ApiClient() as api:
                 api_instance = client.CustomObjectsApi(api)
                 try:
                     request.ctx.user = await api_instance.get_namespaced_custom_object(
-                        "codemowers.io", "v1alpha1", "default", "oidcgatewayusers", username)
+                        "codemowers.cloud", "v1beta1", "default", "oidcusers", username)
                 except ApiException as e:
                     if e.status == 404:
                         raise ValueError("No such user")
@@ -91,92 +90,33 @@ def login_required(*foo):
         return wrapped
     return wrapper
 
-
-async def create_sandbox(user, values):
-    labels = {
-        "owner": user["metadata"]["name"],
-        "env": "sandbox",
-    }
-    identifier = "".join([random.choice(characters) for _ in range(0, 5)])
-    values.append({
-        "name": "username",
-        "value": user["metadata"]["name"]
-    })
-    values.append({
-        "name": "email",
-        "value": user["spec"]["email"]
-    })
-    name = "%s-%s" % (user["metadata"]["name"], identifier)
-    print("Creating sandbox:", name)
-    body = {
-        "kind": "Application",
-        "apiVersion": "argoproj.io/v1alpha1",
-        "metadata": {
-            "name": name,
-            "labels": labels,
-            "annotations": {
-                "app.kubernetes.io/managed-by": ANNOTATION_MANAGED_BY
-            }
-        },
-        "spec": {
-            "project": "default",
-            "source": {
-                "repoURL": sandbox_config["template"],
-                "path": "./",
-                "targetRevision": "HEAD",
-                "helm": {
-                    "releaseName": name,
-                    "parameters": values
-                }
-            }, "destination": {
-                "server": "https://kubernetes.default.svc",
-                "namespace": name,
-            }, "syncPolicy": {
-                "automated": {
-                    "prune": True
-                }, "syncOptions": [
-                    "CreateNamespace=true"
-                ]
-            }
-        }
-    }
+@app.route("/add", methods=["GET", "POST"])
+@login_required()
+async def add_sandbox_form(request):
+    username = request.ctx.user["metadata"]["name"]
     async with ApiClient() as api:
         api_instance = client.CustomObjectsApi(api)
         v1 = client.CoreV1Api(api)
-        await api_instance.create_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications", body)
+        labels = {
+            "codemowers.cloud/sandbox-owner": username,
+            "env": "sandbox",
+        }
+        identifier = "".join([random.choice(characters) for _ in range(0, 5)])
+        name = "sb-%s-%s" % (username, identifier)
+        print({
+            "metadata": {
+                "name": name,
+                "labels": labels
+            }
+        })
         await v1.create_namespace({
             "metadata": {
                 "name": name,
                 "labels": labels
             }
         })
-        return name
+        return response.redirect("/sandbox/%s" % name)
 
-
-@app.route("/add", methods=["GET", "POST"])
-@app.ext.template("add.html")
-@login_required()
-async def add_sandbox_form(request):
-    form = PlaygroundForm(request)
-    if form.validate():
-        sandbox_name = await create_sandbox(request.ctx.user,
-            values=[{"name": key, "value": str(value)} for (key, value) in form.data.items() if key not in ("submit", "csrf_token")])
-        return response.redirect("/sandbox/%s" % sandbox_name)
-    return {
-        "form": form
-    }
-
-
-def wrap_sandbox_parameters(app):
-    app_source = app["spec"].get("source", {})
-    app_helm = app_source.get("helm", {})
-    params = dict([(p["name"], p.get("value", "")) for p in app_helm.get("parameters", {})])
-    subdomain = params.get("subdomain", "false").lower() == "true"
-    return {
-        "namespace": app["metadata"]["name"],
-        "hostname_suffix": (".%s.codemowers.cloud" if subdomain else "-%s.codemowers.ee") % params.get("username"),
-        "parameters": params
-    }
 
 
 @app.get("/sandbox/<sandbox_name>/delete")
@@ -198,12 +138,17 @@ async def sandbox_detail(request, sandbox_name):
         api_instance = client.CustomObjectsApi(api)
         v1 = client.CoreV1Api(api)
         network_api = client.NetworkingV1Api(api)
-        argo_app = await api_instance.get_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications", sandbox_name)
         pods = [j.to_dict() for j in (await v1.list_namespaced_pod(sandbox_name)).items]
-        sandbox = wrap_sandbox_parameters(argo_app)
+        sandbox = {}
+        ns = await v1.read_namespace(sandbox_name)
+
+        sandbox["owner"] = ns.metadata.labels.get("codemowers.cloud/sandbox-owner", ns.metadata.labels.get("owner", None))
+        if not sandbox["owner"]:
+            raise
         sandbox["cluster"] = sandbox_config["cluster"]
         sandbox["registry"] = sandbox_config["registry"]
 
+        """
         # Generate sandbox links
         sandbox["links"] = []
         for link in sandbox_config["sandboxLinks"]:
@@ -223,44 +168,65 @@ async def sandbox_detail(request, sandbox_name):
                 feature_flag = j.get("feature")
                 if feature_flag:
                     if not sandbox["parameters"].get(feature_flag):
-                        continue
+                continue
                 j["url"] = Template(j["url"]).render({"sandbox": sandbox})
                 pod["links"].append(j)
-        return {
+        """
+        d = {
             "args": args,
             "namespace": sandbox_name,
             "sandbox": sandbox,
             "pods": pods,
             "ingress": (await network_api.list_namespaced_ingress(sandbox_name)).items,
+        }
 
-            "secretclaims": (await api_instance.list_namespaced_custom_object(
-                "codemowers.cloud", "v1beta1", sandbox_name, "secretclaims"))["items"],
+        if ('codemowers.cloud', 'SecretClaim') in app.ctx.crds:
+            d["secretclaims"] = (await api_instance.list_namespaced_custom_object(
+                "codemowers.cloud", "v1beta1", sandbox_name, "secretclaims"))["items"]
 
-            "mysqldatabaseclaims": (await api_instance.list_namespaced_custom_object(
-                "codemowers.cloud", "v1beta1", sandbox_name, "mysqldatabaseclaims"))["items"],
-            "mysqldatabaseclasses": (await api_instance.list_cluster_custom_object(
-                "codemowers.cloud", "v1beta1", "mysqldatabaseclasses"))["items"],
+        if ('codemowers.cloud', 'MysqlDatabaseClaim') in app.ctx.crds:
+            d["mysqldatabaseclaims"] = (await api_instance.list_namespaced_custom_object(
+                "codemowers.cloud", "v1beta1", sandbox_name, "mysqldatabaseclaims"))["items"]
+            d["mysqldatabaseclasses"] = (await api_instance.list_cluster_custom_object(
+                "codemowers.cloud", "v1beta1", "mysqldatabaseclasses"))["items"]
 
-            "postgresdatabaseclaims": (await api_instance.list_namespaced_custom_object(
-                "codemowers.cloud", "v1beta1", sandbox_name, "postgresdatabaseclaims"))["items"],
-            "postgresdatabaseclasses": (await api_instance.list_cluster_custom_object(
-                "codemowers.cloud", "v1beta1", "postgresdatabaseclasses"))["items"],
+        if ('codemowers.cloud', 'PostgresDatabaseClaim') in app.ctx.crds:
+            d["postgresdatabaseclaims"] = (await api_instance.list_namespaced_custom_object(
+                "codemowers.cloud", "v1beta1", sandbox_name, "postgresdatabaseclaims"))["items"]
+            d["postgresdatabaseclasses"] = (await api_instance.list_cluster_custom_object(
+                "codemowers.cloud", "v1beta1", "postgresdatabaseclasses"))["items"]
 
-            "keydbclaims": (await api_instance.list_namespaced_custom_object(
-                "codemowers.cloud", "v1beta1", sandbox_name, "keydbclaims"))["items"],
-            "keydbclasses": (await api_instance.list_cluster_custom_object(
+        if ('codemowers.cloud', 'KeydbClaim') in app.ctx.crds:
+            d["keydbclaims"] = (await api_instance.list_namespaced_custom_object(
+                "codemowers.cloud", "v1beta1", sandbox_name, "keydbclaims"))["items"]
+            d["keydbclasses"] = (await api_instance.list_cluster_custom_object(
                 "codemowers.cloud", "v1beta1", "keydbclasses"))["items"],
 
-            "redisclaims": (await api_instance.list_namespaced_custom_object(
-                "codemowers.cloud", "v1beta1", sandbox_name, "redisclaims"))["items"],
-            "redisclasses": (await api_instance.list_cluster_custom_object(
-                "codemowers.cloud", "v1beta1", "redisclasses"))["items"],
+        if ('codemowers.cloud', 'RedisClaim') in app.ctx.crds:
+            d["redisclaims"] = (await api_instance.list_namespaced_custom_object(
+                "codemowers.cloud", "v1beta1", sandbox_name, "redisclaims"))["items"]
+            d["redisclasses"] = (await api_instance.list_cluster_custom_object(
+                "codemowers.cloud", "v1beta1", "redisclasses"))["items"]
 
-            "miniobucketclaims": (await api_instance.list_namespaced_custom_object(
-                "codemowers.cloud", "v1beta1", sandbox_name, "miniobucketclaims"))["items"],
-            "miniobucketclasses": (await api_instance.list_cluster_custom_object(
+        if ('codemowers.cloud', 'MinioBucketClaim') in app.ctx.crds:
+            d["miniobucketclaims"] = (await api_instance.list_namespaced_custom_object(
+                "codemowers.cloud", "v1beta1", sandbox_name, "miniobucketclaims"))["items"]
+            d["miniobucketclasses"] = (await api_instance.list_cluster_custom_object(
                 "codemowers.cloud", "v1beta1", "miniobucketclasses"))["items"]
-        }
+
+        if ('dragonflydb.io', 'Dragonfly') in app.ctx.crds:
+            d["dragonflies"] = (await api_instance.list_namespaced_custom_object(
+                "dragonflydb.io", "v1alpha1", sandbox_name, "dragonflies"))["items"]
+
+        if ('postgresql.cnpg.io', 'Cluster') in app.ctx.crds:
+            d["cnpgs"] = (await api_instance.list_namespaced_custom_object(
+                "postgresql.cnpg.io", "v1", sandbox_name, "clusters"))["items"]
+
+        if ('mongodbcommunity.mongodb.com', 'MongoDBCommunity') in app.ctx.crds:
+            d["mongodbs"] = (await api_instance.list_namespaced_custom_object(
+                "mongodbcommunity.mongodb.com", "v1", sandbox_name, "mongodbcommunity"))["items"]
+
+        return d
 
 
 @app.get("/")
@@ -268,59 +234,13 @@ async def sandbox_detail(request, sandbox_name):
 @login_required()
 async def handler(request):
     async with ApiClient() as api:
-        api_instance = client.CustomObjectsApi(api)
-        """
-        body = {
-            "apiVersion": "codemowers.io/v1alpha1",
-            "kind": "ClusterHarborProject",
-            "metadata": {
-                "name": request.ctx.user["metadata"]["name"]
-            }, "spec": {
-                "cache": False,
-                "public": False,
-                "quota": 2 * 1024 * 1024 * 1024
-            }
-        }
-        try:
-            request.ctx.user = await api_instance.create_cluster_custom_object(
-                "codemowers.cloud", "v1beta1", "clusterharborprojects", body)
-        except ApiException as e:
-            if e.status == 409:
-                pass
-            else:
-                raise
-
-        body = {
-            "apiVersion": "codemowers.io/v1alpha1",
-            "kind": "ClusterHarborProjectMember",
-            "metadata": {
-                "name": request.ctx.user["metadata"]["name"]
-            }, "spec": {
-                "project": request.ctx.user["metadata"]["name"],
-                "username": request.ctx.user["metadata"]["name"],
-                "role": "PROJECT_ADMIN",
-            }
-        }
-        try:
-            request.ctx.user = await api_instance.create_cluster_custom_object(
-                "codemowers.cloud", "v1beta1", "clusterharborprojectmembers", body)
-        except ApiException as e:
-            if e.status == 409:
-                pass
-            else:
-                raise
-        """
+        v1 = client.CoreV1Api(api)
         sandboxes = []
-        for app in (await api_instance.list_namespaced_custom_object("argoproj.io", "v1alpha1", "argocd", "applications", label_selector="env==sandbox"))["items"]:
-            if "deletionTimestamp" in app["metadata"]:
-                # Hide sandboxes that are about to be deleted
-                continue
-            w = wrap_sandbox_parameters(app)
-            sandboxes.append(w)
+        for ns in (await v1.list_namespace(label_selector="env==sandbox")).items:
+            sandboxes.append(ns)
 
         return {
             "args": args,
-            "feature_flags": sandbox_config["features"],
             "sandboxes": sandboxes
         }
 
@@ -331,6 +251,18 @@ async def setup_db(app, loop):
         await config.load_kube_config()
     else:
         config.load_incluster_config()
+
+    async with ApiClient() as api:
+        api_instance = client.CustomObjectsApi(api)
+        v1 = client.CoreV1Api(api)
+        app.ctx.crds = dict([((j["spec"]["group"], j["spec"]["names"]["kind"]),
+            [i["name"] for i in j["spec"]["versions"]]) for j in
+            (await api_instance.list_cluster_custom_object(
+            "apiextensions.k8s.io", "v1", "customresourcedefinitions"))["items"]])
+        print("Discovered CRD-s:")
+        for k,v in sorted(app.ctx.crds.items()):
+            print("* %s: %s" % (repr(k), ", ".join(v)))
+
     app.add_task(prometheus_async.aio.web.start_http_server(port=5000))
 
 if __name__ == "__main__":

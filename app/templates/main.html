@@ -10,24 +10,14 @@
   <thead>
     <tr>
       <th scope="col">Sandbox name</th>
-      {% for feature_flag in feature_flags %}
-        <th scope="col">
-          {% if feature_flag.icon %}
-            <img src="{{ feature_flag.icon }}" style="max-width:64px; max-height:64px;"/>
-          {% else %}
-            {{ feature_flag.name }}
-          {% endif %}
-        </th>
-      {% endfor %}
+      <th scope="col">Owner</th>
     </tr>
   </thead>
   <tbody>
     {% for sandbox in sandboxes %}
       <tr>
-        <td><a href="/sandbox/{{ sandbox.namespace }}">{{ sandbox.namespace }}</a></td>
-        {% for feature_flag in feature_flags %}
-          <td>{% if sandbox.parameters[feature_flag.name] == "True" %}&#128505;{% else %}&#9744;{% endif %}</td>
-        {% endfor %}
+        <td><a href="/sandbox/{{ sandbox.metadata.name }}">{{ sandbox.metadata.name }}</a></td>
+        <td>{{ sandbox.metadata.labels['codemowers.io/sandbox-owner'] }}</td>
       <tr>
     {% endfor %}
   </tbody>
