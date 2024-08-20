@@ -17,7 +17,7 @@
     {% for sandbox in sandboxes %}
       <tr>
         <td><a href="/sandbox/{{ sandbox.metadata.name }}">{{ sandbox.metadata.name }}</a></td>
-        <td>{{ sandbox.metadata.labels['codemowers.io/sandbox-owner'] }}</td>
+        <td>{{ sandbox.metadata.labels['codemowers.cloud/sandbox-owner'] }}</td>
       <tr>
     {% endfor %}
   </tbody>
