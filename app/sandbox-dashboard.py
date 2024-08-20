@@ -74,7 +74,7 @@ def login_required(*foo):
         @wraps(func)
         async def wrapped(request, *args, **kwargs):
             # TODO: Move to OIDC
-            username = request.headers.get(HTTP_REQUEST_HEADER_USERNAME, "lauri").lower()
+            username = request.headers.get(HTTP_REQUEST_HEADER_USERNAME, "laurivosandi").lower()
             request.ctx.user = None
             async with ApiClient() as api:
                 api_instance = client.CustomObjectsApi(api)
@@ -94,27 +94,65 @@ def login_required(*foo):
 @login_required()
 async def add_sandbox_form(request):
     username = request.ctx.user["metadata"]["name"]
+    identifier = "".join([random.choice(characters) for _ in range(0, 5)])
+    name = "sb-%s-%s" % (username, identifier)
+    labels = {
+        "codemowers.cloud/sandbox-owner": username,
+        "env": "sandbox",
+    }
     async with ApiClient() as api:
         api_instance = client.CustomObjectsApi(api)
         v1 = client.CoreV1Api(api)
-        labels = {
-            "codemowers.cloud/sandbox-owner": username,
-            "env": "sandbox",
-        }
-        identifier = "".join([random.choice(characters) for _ in range(0, 5)])
-        name = "sb-%s-%s" % (username, identifier)
-        print({
-            "metadata": {
-                "name": name,
-                "labels": labels
-            }
-        })
+
         await v1.create_namespace({
             "metadata": {
                 "name": name,
                 "labels": labels
             }
         })
+
+        if sandbox_config.get("argo"):
+            values = [
+                {
+                    "name": "username",
+                    "value": username
+                }
+            ]
+            body = {
+                "kind": "Application",
+                "apiVersion": "argoproj.io/v1alpha1",
+                "metadata": {
+                    "name": name,
+                    "labels": labels,
+                    "annotations": {
+                        "app.kubernetes.io/managed-by": ANNOTATION_MANAGED_BY
+                    }
+                },
+                "spec": {
+                    "project": sandbox_config["argo"]["project"],
+                    "source": {
+                        "repoURL": sandbox_config["argo"]["url"],
+                        "path": "./",
+                        "targetRevision": "HEAD",
+                        "helm": {
+                            "releaseName": name,
+                            "parameters": values
+                        }
+                    }, "destination": {
+                        "server": "https://kubernetes.default.svc",
+                        "namespace": name,
+                    }, "syncPolicy": {
+                        "automated": {
+                            "prune": True
+                        }, "syncOptions": [
+                            "CreateNamespace=true"
+                        ]
+                    }
+                }
+            }
+            await api_instance.create_namespaced_custom_object(
+                "argoproj.io", "v1alpha1", sandbox_config["argo"]["namespace"],
+                "applications", body)
         return response.redirect("/sandbox/%s" % name)
 
 

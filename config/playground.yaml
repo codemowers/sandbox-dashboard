@@ -1,6 +1,9 @@
-template: git@git.k-space.ee:codemowers/lab-template
 registry:
   hostname: harbor.codemowers.eu
+argo:
+  url: https://github.com/codemowers/sandbox-template
+  project: sandboxes
+  namespace: default
 cluster:
   name: codemowers.eu
   server: https://kube.codemowers.eu
